@@ -1,0 +1,7 @@
+{
+	"address" : "127.0.0.1:9090",
+	"database": {
+		"type": "sqlite3",
+		"path": "example/vjk.sqlite"
+	}
+}
