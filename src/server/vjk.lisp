@@ -59,7 +59,7 @@
 
 (defun vjk-handle-list (jhash) t)
 
-(defun vjk-handle-request (stream)
+(defun vjk-handle-request (conf stream)
   (let* ((flexi (flexi-streams:make-flexi-stream stream
                                                 :external-format :utf-8))
          (json (read-line flexi)))
@@ -88,12 +88,12 @@
             (let* ((sk-client (usocket:socket-accept sk-server))
                    (client-stream (usocket:socket-stream sk-client)))
               (sb-thread:make-thread
-                (lambda (stream)
-                  (let ((res (funcall #'vjk-handle-request stream)))
+                (lambda ()
+                  (let ((res
+                          (funcall #'vjk-handle-request conf client-stream)))
                     (close client-stream)
                     (usocket:socket-close sk-client)
-                    res))
-                :arguments client-stream))))))
+                    res))))))))
 
 (defun file-get-content (filename)
   (with-open-file (stream filename)
