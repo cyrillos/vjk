@@ -89,11 +89,9 @@
                    (client-stream (usocket:socket-stream sk-client)))
               (sb-thread:make-thread
                 (lambda ()
-                  (let ((res
-                          (funcall #'vjk-handle-request conf client-stream)))
-                    (close client-stream)
-                    (usocket:socket-close sk-client)
-                    res))))))))
+                  (funcall #'vjk-handle-request conf client-stream)
+                  (close client-stream)
+                  (usocket:socket-close sk-client))))))))
 
 (defun file-get-content (filename)
   (with-open-file (stream filename)
