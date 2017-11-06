@@ -50,16 +50,23 @@
      (sb-ext:exit :code 1)))
 
 ;;;
+;;; Database
+;;;
+(defparameter *db-lock* (bordeaux-threads:make-lock))
+(defun ltm-db-lock () (bordeaux-threads:acquire-lock *db-lock*))
+(defun ltm-db-unlock () (bordeaux-threads:release-lock *db-lock*))
+
+;;;
 ;;; Main code
 ;;;
 
-(defun vjk-handle-start (jhash) t)
-(defun vjk-handle-stop (jhash)
+(defun vjk-handle-start (db jhash) t)
+(defun vjk-handle-stop (db jhash)
   (pr-exit "Buy!"))
 
-(defun vjk-handle-list (jhash) t)
+(defun vjk-handle-list (db jhash) t)
 
-(defun vjk-handle-request (conf stream)
+(defun vjk-handle-request (db stream)
   (let* ((flexi (flexi-streams:make-flexi-stream stream
                                                 :external-format :utf-8))
          (json (read-line flexi)))
@@ -68,11 +75,11 @@
            (cmd (gethash "cmd" jhash)))
       (when cmd
         (cond ((string= cmd "start")
-               (vjk-handle-start jhash))
+               (vjk-handle-start db jhash))
               ((string= cmd "stop")
-               (vjk-handle-stop jhash))
+               (vjk-handle-stop db jhash))
               ((string= cmd "list")
-               (vjk-handle-list jhash))
+               (vjk-handle-list db jhash))
               (t (pr-fatal "Unknown command ~a")))))))
 
 (defun vjk-server (conf)
@@ -82,14 +89,16 @@
          (sk-server
            (usocket:socket-listen addr port
                                   :reuse-address t
-                                  :element-type '(unsigned-byte 8))))
+                                  :element-type '(unsigned-byte 8)))
+         (db (sqlite:connect (gethash "path" (gethash "database" conf)))))
     (unwind-protect
       (loop do
             (let* ((sk-client (usocket:socket-accept sk-server))
                    (client-stream (usocket:socket-stream sk-client)))
               (sb-thread:make-thread
                 (lambda ()
-                  (funcall #'vjk-handle-request conf client-stream)
+                  (funcall #'vjk-handle-request db client-stream)
+                  (sqlite:disconnect db)
                   (close client-stream)
                   (usocket:socket-close sk-client))))))))
 
