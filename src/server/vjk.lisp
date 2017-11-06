@@ -50,6 +50,34 @@
      (sb-ext:exit :code 1)))
 
 ;;;
+;;; Date and time conversion
+;;; http://lisptips.com/post/11649360174/the-common-lisp-and-unix-epochs
+;;;
+(defparameter *unix-epoch-difference*
+  (encode-universal-time 0 0 0 1 1 1970 0))
+
+(defun universal-to-unix-time (universal-time)
+  (- universal-time *unix-epoch-difference*))
+
+(defun unix-to-universal-time (unix-time)
+  (+ unix-time *unix-epoch-difference*))
+
+(defun get-unix-time ()
+  (universal-to-unix-time (get-universal-time)))
+
+(defun today-starts-unix-time ()
+  (multiple-value-bind
+    (second minute hour date month year day-of-week dst-p tz)
+    (get-decoded-time)
+    (universal-to-unix-time (encode-universal-time 0 0 0 date month year))))
+
+(defun today-ends-unix-time ()
+  (multiple-value-bind
+    (second minute hour date month year day-of-week dst-p tz)
+    (get-decoded-time)
+    (universal-to-unix-time (encode-universal-time 59 59 23 date month year))))
+
+;;;
 ;;; Database
 ;;;
 (defparameter *db-lock* (bordeaux-threads:make-lock))
