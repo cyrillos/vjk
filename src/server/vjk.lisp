@@ -85,15 +85,15 @@
                                   :element-type '(unsigned-byte 8))))
     (unwind-protect
       (loop do
-            (let* ((sk-client (usocket:socket-accept sk-server)))
-              (let* ((client-stream (usocket:socket-stream sk-client)))
-                (sb-thread:make-thread
-                  (lambda (stream)
-                    (let ((res (funcall #'vjk-handle-request stream)))
-                      (close client-stream)
-                      (usocket:socket-close sk-client)
-                      res))
-                  :arguments client-stream)))))))
+            (let* ((sk-client (usocket:socket-accept sk-server))
+                   (client-stream (usocket:socket-stream sk-client)))
+              (sb-thread:make-thread
+                (lambda (stream)
+                  (let ((res (funcall #'vjk-handle-request stream)))
+                    (close client-stream)
+                    (usocket:socket-close sk-client)
+                    res))
+                :arguments client-stream))))))
 
 (defun file-get-content (filename)
   (with-open-file (stream filename)
