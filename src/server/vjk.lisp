@@ -107,10 +107,22 @@
 
 (defun vjk-handle-list (db jhash) t)
 
-(defun vjk-handle-request (db stream)
-  (let* ((flexi (flexi-streams:make-flexi-stream stream
-                                                :external-format :utf-8))
-         (json (read-line flexi)))
+(defun vjk-read-line (stream)
+  (let* ((flexi (flexi-streams:make-flexi-stream
+                  stream :external-format :utf-8))
+         (str (read-line flexi)))
+    (close flexi)
+    str))
+
+(defun vjk-write-line (stream)
+  (let* ((flexi (flexi-streams:make-flexi-stream
+                  stream :external-format :utf-8))
+         (str (write-line flexi)))
+    (close flexi)
+    str))
+
+(defun vjk-handle-request (db sk stream)
+  (let ((json (vjk-read-line stream)))
     (pr-info "vjk-handle-request: ~a" json)
     (let* ((jhash (yason:parse json))
            (cmd (gethash "cmd" jhash)))
@@ -138,7 +150,7 @@
                    (client-stream (usocket:socket-stream sk-client)))
               (sb-thread:make-thread
                 (lambda ()
-                  (funcall #'vjk-handle-request db client-stream)
+                  (funcall #'vjk-handle-request db sk-client client-stream)
                   (sqlite:disconnect db)
                   (close client-stream)
                   (usocket:socket-close sk-client))))))))
