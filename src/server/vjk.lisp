@@ -103,7 +103,7 @@
 
 (defun vjk-handle-start (db jhash) t)
 (defun vjk-handle-stop (db jhash)
-  (pr-exit "Buy!"))
+  (pr-exit "Bye!"))
 
 (defun vjk-handle-list (db jhash) t)
 
