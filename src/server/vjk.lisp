@@ -125,7 +125,7 @@
   (let ((json (vjk-read-line stream)))
     (pr-info "vjk-handle-request: ~a" json)
     (let* ((jhash (yason:parse json))
-           (cmd (gethash "cmd" jhash)))
+           (cmd (if jhash (gethash "cmd" jhash) nil)))
       (when cmd
         (cond ((string= cmd "start")
                (vjk-handle-start db jhash))
