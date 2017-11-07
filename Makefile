@@ -37,4 +37,16 @@ export RM MAKE GIT CP CTAGS PYTHON SBCL
 srv-y	+= src/server/vjk.lisp
 cli-y	+= src/client/vjk.py
 
+srv: $(srv-y)
+	$(Q) $(SBCL) --load $(srv-y) --conf conf/vjk.json
+.PHONY: srv
+
+cli-start: $(cli-y)
+	$(Q) $(PYTHON) $(cli-y) --conf conf/vjk.json start psmb@vz,sas32
+.PHONY: cli-start
+
+cli-stop: $(cli-y)
+	$(Q) $(PYTHON) $(cli-y) --conf conf/vjk.json stop
+.PHONY: cli-start
+
 .SUFFIXES:
