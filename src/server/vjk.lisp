@@ -88,6 +88,19 @@
 ;;; Main code
 ;;;
 
+(defun vjk-encode-reply (stream status &optional msg)
+  (yason:with-output (stream)
+    (yason:with-object ()
+      (yason:encode-object-element "status" status)
+      (when msg
+        (yason:encode-object-element "message" msg)))))
+
+(defun vjk-encode-reply-ok (stream)
+  (vjk-encode-reply stream "OK"))
+
+(defun vjk-encode-reply-err (stream msg)
+  (vjk-encode-reply stream "ERROR" msg))
+
 (defun vjk-handle-start (db jhash) t)
 (defun vjk-handle-stop (db jhash)
   (pr-exit "Buy!"))
