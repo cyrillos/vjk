@@ -81,8 +81,8 @@
 ;;; Database
 ;;;
 (defparameter *db-lock* (bordeaux-threads:make-lock))
-(defun ltm-db-lock () (bordeaux-threads:acquire-lock *db-lock*))
-(defun ltm-db-unlock () (bordeaux-threads:release-lock *db-lock*))
+(defun db-lock () (bordeaux-threads:acquire-lock *db-lock*))
+(defun db-unlock () (bordeaux-threads:release-lock *db-lock*))
 
 ;;;
 ;;; Main code
