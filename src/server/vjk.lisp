@@ -156,10 +156,11 @@
                   (usocket:socket-close sk-client))))))))
 
 (defun file-get-content (filename)
-  (with-open-file (stream filename)
-    (let ((content (make-string (file-length stream))))
-      (read-sequence content stream)
-      content)))
+  (when (probe-file filename)
+    (with-open-file (stream filename)
+      (let ((content (make-string (file-length stream))))
+        (read-sequence content stream)
+        content))))
 
 (defun vjk-validate-conf (conf)
   (let ((db (gethash "database" conf))
@@ -174,8 +175,13 @@
 
 (defun vjk-parse-conf (path)
     (pr-info "vjk-parse-conf: ~a" path)
-    (let ((conf (yason:parse (file-get-content path))))
-          (vjk-validate-conf conf)))
+    (handler-case
+      (let ((conf (yason:parse (file-get-content path))))
+          (vjk-validate-conf conf))
+      (error (c)
+             (declare (ignore c))
+             (pr-err "Can't parse ~s~%" path)
+             nil)))
 
 (defun handle-argv (argv)
   (when argv
