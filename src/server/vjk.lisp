@@ -82,6 +82,12 @@
 ;;; Main code
 ;;;
 
+(defmacro make-vjk-key (val)
+  `(concatenate 'string "vjk-" ,val))
+
+(defmacro hash-vjk-key (key value htable)
+  `(setf (gethash (make-vjk-key ,key) ,htable) ,value))
+
 (defun vjk-encode-reply (stream status &optional msg)
   (yason:with-output (stream)
     (yason:with-object ()
@@ -156,22 +162,64 @@
         (read-sequence content stream)
         content))))
 
-(defun vjk-validate-conf (conf)
-  (let ((db (gethash "database" conf))
-        (addr (gethash "address" conf)))
-        (if (not (and db addr))
-            (pr-fatal "No database/address"))
-        (if (not (and
-                   (gethash "type" db)
-                   (gethash "path" db)))
-            (pr-fatal "No type/path")))
-  conf)
+(defun conf-validate-addr (val htable)
+  (let ((addrport (cl-ppcre:split ":" val)))
+    (when (>= (list-length addrport) 2)
+      (ignore-errors
+        (multiple-value-bind
+          (address port)
+          (values (first addrport)
+                  (parse-integer (second addrport)))
+          (hash-vjk-key "address" address htable)
+          (hash-vjk-key "port" port htable)
+          (return-from conf-validate-addr t))))))
+
+(defun conf-validate-db-type (val htable)
+  (declare (ignore htable))
+  (when (string= val "sqlite3") t))
+
+(defun conf-validate-db-path (val htable)
+  (declare (ignore htable))
+  (when (probe-file val) t))
+
+(defparameter conf-template
+  (list
+    '("address"         conf-validate-addr)
+    '("database"
+      ("type"           conf-validate-db-type)
+      ("path"           conf-validate-db-path))))
+
+;
+; Walk over template and json parsed hash
+; to validate values
+(defun conf-validator (template htable)
+  (when (and template htable)
+    (dolist (elem template)
+      (let* ((head (car elem))
+             (hash (gethash head htable))
+             (tail (car (cdr elem)))
+             (res
+               (if (symbolp tail)
+                   (funcall tail hash htable)
+                   (conf-validator (cdr elem) hash))))
+        (if (not res)
+              (progn
+                (pr-err "Invalid json input: \"~a\":\"~a\"" head hash)
+                (return-from conf-validator nil)))))
+    t))
+
+(defun validate-conf (path conf)
+  (let ((res (conf-validator conf-template conf)))
+    (if (not res)
+        (pr-err "Invalid json conf in ~a" path) nil)
+        conf))
 
 (defun vjk-parse-conf (path)
     (pr-info "vjk-parse-conf: ~a" path)
     (handler-case
       (let ((conf (yason:parse (file-get-content path))))
-          (vjk-validate-conf conf))
+        (when (validate-conf path conf)
+          conf))
       (error (c)
              (declare (ignore c))
              (pr-err "Can't parse ~s~%" path)
