@@ -13,17 +13,8 @@
 ;;;
 ;;; Printing helpers
 ;;;
-(defmacro panic (message &rest body)
-  `(error ,message ,@body))
-
 (defmacro pr-func (prefix fmt &rest body)
   `(format t (concatenate 'string ,prefix ,fmt "~%") ,@body))
-
-(defmacro pr-msg (fmt &rest body)
-  `(format t (concatenate 'string ,fmt "~%") ,@body))
-
-(defmacro pr-sep ()
-  `(format t "-----------------------------------------------~%"))
 
 (defmacro pr-err (fmt &rest body)
   `(pr-func "error: " ,fmt ,@body))
@@ -33,11 +24,6 @@
 
 (defmacro pr-warn (fmt &rest body)
   `(pr-func "warn:  " ,fmt ,@body))
-
-(defmacro pr-report (header &rest body)
-  `(progn
-     (pr-msg ,header)
-     (pr-sep) ,@body (pr-sep)))
 
 (defmacro pr-exit (fmt &rest body)
   `(progn
