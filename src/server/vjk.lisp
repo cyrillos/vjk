@@ -28,12 +28,20 @@
 (defmacro pr-exit (fmt &rest body)
   `(progn
      (pr-info ,fmt ,@body)
-     (sb-ext:exit :code 0)))
+     #+sbcl
+     (sb-ext:exit :code 0)
+     #+clisp
+     (ext:exit 0)
+     ))
 
 (defmacro pr-fatal (fmt &rest body)
   `(progn
      (pr-err ,fmt ,@body)
-     (sb-ext:exit :code 1)))
+     #+sbcl
+     (sb-ext:exit :code 1)
+     #+clisp
+     (ext:exit 1)
+     ))
 
 ;;;
 ;;; Date and time conversion
