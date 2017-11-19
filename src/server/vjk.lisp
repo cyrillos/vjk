@@ -135,15 +135,13 @@
                (vjk-handle-list db jhash))
               (t (pr-fatal "Unknown command ~a")))))))
 
-(defun vjk-server (conf)
-  (let* ((addrport (cl-ppcre:split ":" (gethash "address" conf)))
-         (addr (first addrport))
-         (port (parse-integer (second addrport)))
-         (sk-server
-           (usocket:socket-listen addr port
-                                  :reuse-address t
-                                  :element-type '(unsigned-byte 8)))
-         (db (sqlite:connect (gethash "path" (gethash "database" conf)))))
+(defun vjk-server (hash-conf)
+  (let ((sk-server (usocket:socket-listen
+                     (gethash (make-vjk-key "address") hash-conf)
+                     (gethash (make-vjk-key "port") hash-conf)
+                     :reuse-address t
+                     :element-type '(unsigned-byte 8)))
+        (db (sqlite:connect (gethash "path" (gethash "database" hash-conf)))))
     (unwind-protect
       (loop do
             (let* ((sk-client (usocket:socket-accept sk-server))
@@ -208,18 +206,18 @@
                 (return-from conf-validator nil)))))
     t))
 
-(defun validate-conf (path conf)
-  (let ((res (conf-validator conf-template conf)))
+(defun validate-conf (path hash-conf)
+  (let ((res (conf-validator conf-template hash-conf)))
     (if (not res)
         (pr-err "Invalid json conf in ~a" path) nil)
-        conf))
+        hash-conf))
 
 (defun vjk-parse-conf (path)
     (pr-info "vjk-parse-conf: ~a" path)
     (handler-case
-      (let ((conf (yason:parse (file-get-content path))))
-        (when (validate-conf path conf)
-          conf))
+      (let ((hash-conf (yason:parse (file-get-content path))))
+        (when (validate-conf path hash-conf)
+          hash-conf))
       (error (c)
              (declare (ignore c))
              (pr-err "Can't parse ~s~%" path)
@@ -228,9 +226,9 @@
 (defun handle-argv (argv)
   (when argv
     (if (string= (first argv) "--conf")
-        (let ((conf (vjk-parse-conf (second argv))))
-          (when conf
-            (vjk-server conf)))
+        (let ((hash-conf (vjk-parse-conf (second argv))))
+          (when hash-conf
+            (vjk-server hash-conf)))
         (handle-argv (cdr argv)))))
 
 (handle-argv sb-ext:*posix-argv*)
