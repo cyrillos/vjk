@@ -70,7 +70,31 @@ class Vjk:
         self.conf = conf
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.addr, self.port = conf["address"].split(":")
-        self.sock.connect((self.addr, int(self.port)))
+        try:
+            self.sock.connect((self.addr, int(self.port)))
+            self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            self.log.debug("Connected")
+        except:
+            self.log.error("Can't connect")
+            sys.exit(1)
+
+    def receive(self):
+        try:
+            seq = self.sock.recv(512)
+            return json.loads(seq.decode('utf8').replace("'", '"'))
+        except:
+            return None
+
+    def send(self, obj):
+        seq = json.dumps(obj).encode()
+        hdr = ("{\"size\":%7d}" % (len(seq))).encode('utf-8')
+        self.log.debug("send: %s %s" % (hdr, seq))
+        self.sock.send(hdr)
+        self.sock.send(seq)
+        recv = self.receive()
+        self.log.debug("recv: %s" % (repr(recv)))
+        return recv
+
     def start(self, args):
         self.log.debug("starting %s" % (repr(args)))
         if len(args) < 1:
@@ -78,33 +102,71 @@ class Vjk:
             return
         vals = re.split("@|,", args[0])
         if len(vals) > 1:
-            obj = {'cmd': 'start',          \
-                   'activity': vals[0],     \
-                   'category': vals[1],     \
-                   'start': int(time.time())}
-            if len(vals) == 3:
-                obj['comment'] = vals[2]
-            jv = json.dumps(obj)
-            self.log.debug("\t%s" % (jv))
-            self.sock.send(jv.encode())
-            self.sock.close()
+            obj = {'cmd': 'start',                  \
+                   'data': {                        \
+                            'activity': vals[0],    \
+                            'category': vals[1],    \
+                            'time': int(time.time())\
+                            }                       \
+                   }
+            self.send(obj)
+            return
+
     def stop(self):
         self.log.debug("stopping")
-        obj = {'cmd': 'stop',               \
-               'stop': int(time.time())}
-        jv = json.dumps(obj)
-        self.log.debug("\t%s" % (jv))
-        self.sock.send(jv.encode())
-        self.sock.close()
+        obj = {'cmd': 'stop', 'data':       \
+               { 'time': int(time.time()) }}
+        self.send(obj)
+        return
+
+    def exit(self):
+        self.log.debug("exiting")
+        obj = {'cmd': 'exit'}
+        self.send(obj)
+        return
+
+    def dts(self, s):
+        h = s // 3600
+        s -= h * 3600
+        m = s // 60
+        s -= m * 60
+        return (h, m, s)
+
+    def list_report(self, data):
+        catlen = 8
+        namelen = 4
+        for x in data:
+            if len(x['category']) > catlen:
+                catlen = len(x['category'])
+            if len(x['name']) > namelen:
+               namelen = len(x['name'])
+        #
+        # id | name | category | lentgh
+        fmt = "{1:<{0:}}{3:<{2:}}{5:<{4:}}{7:<{6:}}"
+        print(fmt.format(6, 'ID', (namelen + 2), 'Name',
+                         catlen + 2, 'Category', 10, 'Duration'))
+        for x in data:
+            h, m, s = self.dts(int(x['stop']) - int(x['start']))
+            hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
+            print(fmt.format(6, x['id'], (namelen + 2), x['name'],
+                             catlen + 2, x['category'], 10, hms))
+
     def list(self):
         self.log.debug("listing")
-        self.sock.close()
+        obj = {'cmd': 'list'}
+        recv = self.send(obj)
+        if recv['status'] == 200:
+            self.list_report(recv['data'])
+        return
 
 vjkcli = Vjk(logging, conf)
+
 if args.cmd[0] == 'start':
     vjkcli.start(args.cmd[1:])
 elif args.cmd[0] == 'stop':
     vjkcli.stop()
+elif args.cmd[0] == 'exit':
+    vjkcli.exit()
 elif args.cmd[0] == 'list':
     vjkcli.list()
 else:

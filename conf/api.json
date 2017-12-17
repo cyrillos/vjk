@@ -1,25 +1,27 @@
 {
 	"start": {
 		"cmd": "start",
-		"activity": "psbm",
-		"category": "vz",
-		"comment": "sas32",
-		"start": "1509895799"
+		"data": {
+			"time": "1509895799",
+			"activity": "psbm",
+			"category": "vz",
+			"comment": "sas32"
+		}
 	},
 	"stop": {
 		"cmd": "stop",
-		"stop": "1509895799"
+		"data": {
+			"time": "1509895799"
+		}
 	},
 	"list": {
 		"cmd": "list",
-		"jdata": "required query in json format"
+		"data": {
+			"query": { }
+		}
 	},
-	"reply-ok": {
-		"status": "OK",
-		"jdata": "optional data in json format"
-	},
-	"reply-err": {
-		"status": "ERROR",
-		"message": "Error description"
+	"reply": {
+		"status": 200,
+		"data": { }
 	}
 }
