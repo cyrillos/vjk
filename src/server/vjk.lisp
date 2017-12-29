@@ -354,7 +354,7 @@
            (activity-list db data))
           ((string= "exit" cmd)
            (ret-ok :should-exit t))
-          (t (ret-fatal (format nil "Unknown command ~a" cmd))))))
+          (t (ret-err (format nil "Unknown command ~a" cmd))))))
 
 (defun start-server (conf)
   (multiple-value-bind (ip port)
