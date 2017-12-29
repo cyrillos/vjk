@@ -330,7 +330,7 @@
   (let ((from (json-get "time-start" data))
         (to (json-get "time-stop" data)))
     (if (not from) (setf from (today-starts-unix-time)))
-    (if (not to) (setf from (today-ends-unix-time)))
+    (if (not to) (setf to (today-ends-unix-time)))
     (let ((recs (db-lookup db "activity"
                            '("start" "stop")
                            '(">=" "<=")
