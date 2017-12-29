@@ -22,24 +22,55 @@ def get_loglevel(num):
         return lvl_nums[num]
     return logging.ERROR
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(prog='vjk.py')
 
-parser.add_argument('cmd',
-                    nargs = '*',
-                    help = 'activity')
 parser.add_argument('--conf', dest = 'conf',
                     default = 'conf/vjk.json',
                     help = 'configuration file in JSON format')
-parser.add_argument('-v', dest = 'verb',
-                    default = 1,
-                    help = 'verbosity level [0-4]')
-args = parser.parse_args()
+
+sp = parser.add_subparsers(dest = 'cmd')
+for cmd in ['start']:
+    spp = sp.add_parser(cmd, help = 'Start new activity')
+
+for cmd in ['stop']:
+    spp = sp.add_parser(cmd, help = 'Stop current activity')
+
+for cmd in ['list']:
+    spp = sp.add_parser(cmd, help = 'List activities')
+    spp.add_argument('--from', dest = 'from',
+                     help = 'Time to report from. Format [-|+]number[d|h|m])')
+    spp.add_argument('--to', dest = 'to',
+                     help = 'Time to report until. Format [-|+]number[d|h|m])')
+
+for cmd in ['edit']:
+    spp = sp.add_parser(cmd, help = 'Edit entity')
+    sub = spp.add_subparsers(dest = 'edit_spp')
+    for cmd_edit in ['activity']:
+        subp = sub.add_parser(cmd_edit, help = 'Edit activity')
+        subp.add_argument('--id', dest = 'id', help = 'Activity ID')
+    for cmd_edit in ['category']:
+        subp = sub.add_parser(cmd_edit, help = 'Edit category')
+        subp.add_argument('--id', dest = 'id', help = 'Categoty ID')
+
+for cmd in ['delete']:
+    spp = sp.add_parser(cmd, help = 'Delete entity')
+    sub = spp.add_subparsers(dest = 'delete_spp')
+    for cmd_edit in ['activity']:
+        subp = sub.add_parser(cmd_edit, help = 'Delete activity')
+        subp.add_argument('--id', dest = 'id', help = 'Activity ID')
+    for cmd_edit in ['category']:
+        subp = sub.add_parser(cmd_edit, help = 'Delete category')
+        subp.add_argument('--id', dest = 'id', help = 'Categoty ID')
+
+for cmd in ['exit']:
+    spp = sp.add_parser(cmd, help = 'Stop server')
+
+args, unknown_args = parser.parse_known_args()
+if args.cmd == None:
+    parser.print_help()
+    sys.exit(1)
 
 conf = []
-
-if len(args.cmd) < 1:
-        logging.error("Supply command")
-        sys.exit(1)
 
 if args.conf != None and os.path.isfile(args.conf):
     with open(args.conf) as f:
@@ -144,10 +175,15 @@ class Vjk:
         # id | name | category | lentgh
         fmt = "{1:<{0:}}{3:<{2:}}{5:<{4:}}{7:<{6:}}"
         print(fmt.format(6, 'ID', (namelen + 2), 'Name',
-                         catlen + 2, 'Category', 10, 'Duration'))
+                         catlen + 2, 'Category', 10, 'Duration (hhhh:mm:ss)'))
         for x in data:
+            if x['stop'] == None:
+                x['stop'] = int(time.time())
+                sign = '*'
+            else:
+                sign = ''
             h, m, s = self.dts(int(x['stop']) - int(x['start']))
-            hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
+            hms = "{0:04d}:{1:02d}:{2:02d}\t{3:2s}".format(h, m, s, sign)
             print(fmt.format(6, x['id'], (namelen + 2), x['name'],
                              catlen + 2, x['category'], 10, hms))
 
@@ -161,14 +197,14 @@ class Vjk:
 
 vjkcli = Vjk(logging, conf)
 
-if args.cmd[0] == 'start':
-    vjkcli.start(args.cmd[1:])
-elif args.cmd[0] == 'stop':
+if args.cmd == 'start':
+    vjkcli.start(unknown_args)
+
+if args.cmd == 'stop':
     vjkcli.stop()
-elif args.cmd[0] == 'exit':
+
+if args.cmd == 'exit':
     vjkcli.exit()
-elif args.cmd[0] == 'list':
+
+if args.cmd == 'list':
     vjkcli.list()
-else:
-    logging.error("Unknown command %s" % (args.cmd[0]))
-    sys.exit(1)
