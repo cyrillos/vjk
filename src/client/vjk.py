@@ -146,8 +146,12 @@ class Vjk:
 
     def stop(self):
         self.log.debug("stopping")
-        obj = {'cmd': 'stop', 'data':       \
-               { 'time': int(time.time()) }}
+        obj = {
+            'cmd': 'stop',
+            'data': {
+                'time': int(time.time())
+            }
+        }
         self.send(obj)
         return
 
