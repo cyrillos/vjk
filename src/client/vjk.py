@@ -132,14 +132,15 @@ class Vjk:
             self.log.error("No arguments passed")
             return
         vals = re.split("@|,", args[0])
-        if len(vals) > 1:
-            obj = {'cmd': 'start',                  \
-                   'data': {                        \
-                            'activity': vals[0],    \
-                            'category': vals[1],    \
-                            'time': int(time.time())\
-                            }                       \
-                   }
+        if len(vals) >= 2:
+            data = {
+                'activity': vals[0],
+                'category': vals[1],
+                'time': int(time.time())
+            }
+            if len(vals) > 2:
+                data['comment'] = vals[2]
+            obj = { 'cmd': 'start', 'data': data }
             self.send(obj)
             return
 
