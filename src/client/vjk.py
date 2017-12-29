@@ -155,7 +155,7 @@ class Vjk:
         self.log.debug("listing")
         obj = {'cmd': 'list'}
         recv = self.send(obj)
-        if recv['status'] == 200:
+        if recv['status'] == 200 and 'data' in recv:
             self.list_report(recv['data'])
         return
 
