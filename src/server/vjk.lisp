@@ -231,6 +231,7 @@
     (let* ((fmt (concatenate 'string "select * from ~a where "
                              "(~{~a~^ " and-or " ~});"))
            (req (format nil fmt table (db-fmt-conds cols conds vals))))
+      (pr-debug "db-lookup: ~a" req)
       (sqlite:execute-to-list db req))))
 
 (defun db-lookup-signle (db table col con val)
@@ -241,6 +242,7 @@
     (let ((req (format nil
                        "insert into ~a (~{~a~^, ~}) values (~{~a~^, ~});"
                        table cols (db-fmt-vals vals))))
+      (pr-debug "db-insert: ~a" req)
       (sqlite:execute-non-query db req)
       (sqlite:last-insert-rowid db))))
 
@@ -248,6 +250,7 @@
   (ignore-errors
     (let ((req (format nil "update ~a set ~{~a~^, ~} where id=~d;"
                        table (db-fmt-conds cols conds vals) id)))
+      (pr-debug "db-update: ~a" req)
       (sqlite:execute-non-query db req)
       (sqlite:last-insert-rowid db))))
 
@@ -270,6 +273,7 @@
   `(values (json-encode-reply-ok) ,should-exit))
 
 (defun activity-start (db data)
+  (pr-debug "activity-start: ~a" data)
   (multiple-value-bind (ts activity category comment)
     (values-list (mapcar #'(lambda(v) (json-get v data))
                          '("time" "activity" "category" "comment")))
@@ -291,6 +295,7 @@
         (ret-ok)))))
 
 (defun activity-stop (db data)
+  (pr-debug "activity-stop: ~a" data)
   (let ((ts (json-get "time" data))
         (actid (db-last-id db "activity")))
     (when (not ts)
@@ -327,6 +332,7 @@
                                           (get-category-name (first args) y) y))))))))
 
 (defun activity-list (db data)
+  (pr-debug "activity-list: ~a" data)
   (let ((from (json-get "time-start" data))
         (to (json-get "time-stop" data)))
     (if (not from) (setf from (today-starts-unix-time)))
@@ -345,7 +351,7 @@
   (let* ((jdata (read-cmd sk-ustream))
          (cmd (json-get "cmd" jdata))
          (data (json-get "data" jdata)))
-    (pr-info "~tcmd ~a data ~a" cmd data)
+    (pr-debug "handle-request: cmd ~a data ~a" cmd data)
     (cond ((string= "start" cmd)
            (activity-start db data))
           ((string= "stop" cmd)
@@ -356,7 +362,7 @@
            (ret-ok :should-exit t))
           (t (ret-err (format nil "Unknown command ~a" cmd))))))
 
-(defun start-server (conf)
+(defun server (conf)
   (multiple-value-bind (ip port)
     (get-ip-port (json-get "address" conf))
     (pr-info "Listening: ~a:~a" ip port)
@@ -375,7 +381,7 @@
                     (multiple-value-bind (reply-data should-exit)
                       (funcall #'handle-request db client-ustream)
                       (when reply-data
-                        (pr-info "reply-data: ~a" reply-data)
+                        (pr-debug "server: reply-data ~a" reply-data)
                         (json-reply client-ustream reply-data))
                       (close client-ustream)
                       (usocket:socket-close sk-client)
@@ -398,4 +404,4 @@
     (pr-fatal "No '--conf path-to-conf' option provided"))
 
 (loglevel-set (json-get "loglevel" *conf*))
-(start-server *conf*)
+(server *conf*)
