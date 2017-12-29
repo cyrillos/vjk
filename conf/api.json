@@ -17,7 +17,8 @@
 	"list": {
 		"cmd": "list",
 		"data": {
-			"query": { }
+			"time-start": "1509895699",
+			"time-stop":  "1509895799"
 		}
 	},
 	"reply": {

@@ -118,7 +118,8 @@
       (yason:encode-object-element "status" status)
       (if callback
         (yason:with-object-element ("data") (funcall callback data))
-        (yason:encode-object-element "data" data)))))
+        (if data
+            (yason:encode-object-element "data" data))))))
 
 (defun json-encode-reply-ok (&key callback data)
   (json-encode-reply 200 :callback callback :data data))
@@ -326,18 +327,19 @@
                                           (get-category-name (first args) y) y))))))))
 
 (defun activity-list (db data)
-  (declare (ignore data))
-  (let* ((from (today-starts-unix-time))
-        (to (today-ends-unix-time))
-        (recs (db-lookup db "activity"
-                        '("start" "stop")
-                        '(">=" "<=")
-                        (list from to) "and")))
-    (when (not recs)
-      (return-from activity-list (ret-ok)))
-    (values (json-encode-reply-ok
-              :callback #'gen-activity-recs
-              :data (list db recs)) nil)))
+  (let ((from (json-get "time-start" data))
+        (to (json-get "time-stop" data)))
+    (if (not from) (setf from (today-starts-unix-time)))
+    (if (not to) (setf from (today-ends-unix-time)))
+    (let ((recs (db-lookup db "activity"
+                           '("start" "stop")
+                           '(">=" "<=")
+                           (list from to) "and")))
+      (when (not recs)
+        (return-from activity-list (ret-ok)))
+      (values (json-encode-reply-ok
+                :callback #'gen-activity-recs
+                :data (list db recs)) nil))))
 
 (defun handle-request (db sk-ustream)
   (let* ((jdata (read-cmd sk-ustream))
