@@ -336,11 +336,16 @@
   (let ((from (json-get "time-start" data))
         (to (json-get "time-stop" data)))
     (if (not from) (setf from (today-starts-unix-time)))
-    (if (not to) (setf to (today-ends-unix-time)))
-    (let ((recs (db-lookup db "activity"
+    (let ((recs
+            (if (not to)
+                (db-lookup db "activity"
+                           '("start")
+                           '(">=")
+                           (list from) nil)
+                (db-lookup db "activity"
                            '("start" "stop")
                            '(">=" "<=")
-                           (list from to) "and")))
+                           (list from to) "and"))))
       (when (not recs)
         (return-from activity-list (ret-ok)))
       (values (json-encode-reply-ok
