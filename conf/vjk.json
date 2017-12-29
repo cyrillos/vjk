@@ -3,5 +3,6 @@
 	"database": {
 		"type": "sqlite3",
 		"path": "example/vjk.sqlite"
-	}
+	},
+	"loglevel": 4
 }

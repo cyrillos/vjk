@@ -143,17 +143,40 @@
 ;;;
 ;;; Printing helpers
 ;;;
-(defmacro pr-func (prefix fmt &rest body)
-  `(format t (concatenate 'string ,prefix ,fmt "~%") ,@body))
+(defparameter *loglevels* '(("debug" . 4) ("info" . 3) ("warn" . 2) ("error" . 1)))
+
+(defun loglevel-decode (name)
+  (cdr (assoc name *loglevels* :test #'equalp)))
+
+(defparameter *current-loglevel* (loglevel-decode "debug"))
+
+(defun loglevel-get () (values *current-loglevel*))
+
+(defun loglevel-set (lvl-or-name)
+  (let ((lvl (if (stringp lvl-or-name)
+                 (cdr (assoc lvl-or-name *loglevels* :test #'equalp))
+                 (values lvl-or-name))))
+    (when lvl
+      (setf *current-loglevel* lvl))))
+
+(defun loglevel-should-print (lvl)
+  (when (<= lvl (loglevel-get)) t))
+
+(defmacro print-on-level (lvl prefix fmt &rest body)
+  `(when (loglevel-should-print ,lvl)
+     (format t (concatenate 'string ,prefix ,fmt "~%") ,@body)))
 
 (defmacro pr-err (fmt &rest body)
-  `(pr-func "error: " ,fmt ,@body))
-
-(defmacro pr-info (fmt &rest body)
-  `(pr-func "info:  " ,fmt ,@body))
+  `(print-on-level 1 "error: " ,fmt ,@body))
 
 (defmacro pr-warn (fmt &rest body)
-  `(pr-func "warn:  " ,fmt ,@body))
+  `(print-on-level 2 "warn : " ,fmt ,@body))
+
+(defmacro pr-info (fmt &rest body)
+  `(print-on-level 3 "info : " ,fmt ,@body))
+
+(defmacro pr-debug (fmt &rest body)
+  `(print-on-level 4 "debug: " ,fmt ,@body))
 
 (defmacro pr-exit (fmt &rest body)
   `(progn (pr-info ,fmt ,@body)
@@ -369,6 +392,8 @@
 
 (process-args (cli-options))
 
-(if (not *conf*)
-    (pr-fatal "No '--conf path-to-conf' option provided")
-    (start-server *conf*))
+(when (not *conf*)
+    (pr-fatal "No '--conf path-to-conf' option provided"))
+
+(loglevel-set (json-get "loglevel" *conf*))
+(start-server *conf*)
