@@ -173,19 +173,24 @@ class Vjk:
                namelen = len(x['name'])
         #
         # id | name | category | lentgh
-        fmt = "{1:<{0:}}{3:<{2:}}{5:<{4:}}{7:<{6:}}"
+        fmt = "{1:<{0:}}{3:<{2:}}{5:<{4:}}{7:<{6:}}{9:<{8:}}"
         print(fmt.format(6, 'ID', (namelen + 2), 'Name',
-                         catlen + 2, 'Category', 10, 'Duration (hhhh:mm:ss)'))
+                         catlen + 2, 'Category',
+                         14, 'Duration',
+                         16, 'Comment'))
         for x in data:
             if x['stop'] == None:
                 x['stop'] = int(time.time())
-                sign = '*'
+                sign = ' *'
             else:
-                sign = ''
+                sign = ' '
+            if x['comment'] == None:
+                x['comment'] = ''
             h, m, s = self.dts(int(x['stop']) - int(x['start']))
-            hms = "{0:04d}:{1:02d}:{2:02d}\t{3:2s}".format(h, m, s, sign)
+            hms = "{0:04d}:{1:02d}:{2:02d}{3:2s}".format(h, m, s, sign)
             print(fmt.format(6, x['id'], (namelen + 2), x['name'],
-                             catlen + 2, x['category'], 10, hms))
+                             catlen + 2, x['category'], 14, hms,
+                             16, x['comment']))
 
     def list(self):
         self.log.debug("listing")
