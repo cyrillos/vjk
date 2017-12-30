@@ -10,6 +10,11 @@ import sys
 import os
 import re
 
+def today_starts_unix_time():
+    t = time.gmtime()
+    return int(time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
+                            t.tm_wday, t.tm_yday, t.tm_isdst)))
+
 def get_loglevel(num):
     lvl_nums = {
         4: logging.DEBUG,
@@ -199,7 +204,8 @@ class Vjk:
 
     def list(self):
         self.log.debug("listing")
-        obj = {'cmd': 'list'}
+        obj = {'cmd': 'list',
+               'data': { 'time-start': today_starts_unix_time() }}
         recv = self.send(obj)
         if recv['status'] == 200 and 'data' in recv:
             self.list_report(recv['data'])
