@@ -38,7 +38,7 @@ srv-y	+= src/server/vjk.lisp
 cli-y	+= src/client/vjk.py
 
 srv: $(srv-y)
-	$(Q) $(SBCL) --load $(srv-y) --conf conf/vjk.json
+	$(Q) $(SBCL) --noinform --load $(srv-y) --conf conf/vjk.json
 .PHONY: srv
 
 cli-start: $(cli-y)
