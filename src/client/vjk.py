@@ -44,9 +44,9 @@ for cmd in ['list']:
     spp = sp.add_parser(cmd, help = 'List activities/categories')
     spp.add_argument('--category', dest = 'category',
                      help = 'Categories mode', action = 'store_true')
-    spp.add_argument('--from', dest = 'from',
+    spp.add_argument('--from', dest = 'start',
                      help = 'Time to report from. Format [-|+]number[d|h|m])')
-    spp.add_argument('--to', dest = 'to',
+    spp.add_argument('--to', dest = 'stop',
                      help = 'Time to report until. Format [-|+]number[d|h|m])')
 
 for cmd in ['edit']:
@@ -196,7 +196,7 @@ class Vjk:
                              catlen + 2, x['category'], 14, hms,
                              16, x['comment']))
 
-    def activity_list(self):
+    def activity_list(self, start, stop):
         self.log.debug("listing")
         obj = {'cmd': 'activity-list',
                'data': { 'time-start': today_starts_unix_time() }}
@@ -217,4 +217,5 @@ if args.cmd == 'exit':
     vjkcli.exit()
 
 if args.cmd == 'list':
-    vjkcli.activity_list()
+    if args.category == False:
+        vjkcli.activity_list(args.start, args.stop)
