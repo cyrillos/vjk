@@ -16,11 +16,52 @@
 			}
 		},
 		{
+			"cmd": "activity-delete",
+			"data": {
+				"id": "1"
+			}
+		},
+		{
+			"cmd": "activity-update",
+			"data": {
+				"id": "1",
+				"time-start": "1509895699",
+				"time-stop":  "1509895799",
+				"activity": "psbm",
+				"category": "vz",
+				"comment": "sas32"
+			}
+		},
+		{
 			"cmd": "activity-list",
 			"data": {
 				"time-start": "1509895699",
 				"time-stop":  "1509895799"
 			}
+		} ],
+	"category": [
+		{
+			"cmd": "category-add",
+			"data": {
+				"category": "vz"
+			}
+		},
+		{
+			"cmd": "category-delete",
+			"data": {
+				"id": 1
+			}
+		},
+		{
+			"cmd": "category-update",
+			"data": {
+				"id": 1,
+				"category": "vz"
+			}
+		},
+		{
+			"cmd": "category-list",
+			"data": { }
 		} ],
 	"reply": {
 		"status": 200,
