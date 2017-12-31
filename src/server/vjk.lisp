@@ -328,9 +328,11 @@
           collect (yason:with-object ()
                     (loop for y in x
                           for z in enames
+                          when y
                           collect (yason:encode-object-element
-                                    z (if (eql z (nth 1 enames))
-                                          (get-category-name (first args) y) y))))))))
+                                    z (cond ((eql z (nth 1 enames))
+                                             (get-category-name (first args) y))
+                                            (t y)))))))))
 
 (defun activity-list (db data)
   (pr-debug "activity-list: ~a" data)
