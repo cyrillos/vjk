@@ -15,6 +15,9 @@ def today_starts_unix_time():
     return int(time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
                             t.tm_wday, t.tm_yday, t.tm_isdst)))
 
+def unix_time():
+    return int(time.time())
+
 def get_loglevel(num):
     lvl_nums = {
         4: logging.DEBUG,
@@ -110,7 +113,8 @@ class Vjk:
 
     def receive(self):
         try:
-            seq = self.sock.recv(512)
+            # FIXM 16K might be not enough
+            seq = self.sock.recv(16 << 10)
             return json.loads(seq.decode('utf8').replace("'", '"'))
         except:
             return None
@@ -188,7 +192,7 @@ class Vjk:
                 sign = ' *'
             else:
                 sign = ' '
-            if x['comment'] == None:
+            if (not 'comment' in x) or x['comment'] == None:
                 x['comment'] = ''
             h, m, s = self.dts(int(x['stop']) - int(x['start']))
             hms = "{0:04d}:{1:02d}:{2:02d}{3:2s}".format(h, m, s, sign)
@@ -196,10 +200,41 @@ class Vjk:
                              catlen + 2, x['category'], 14, hms,
                              16, x['comment']))
 
+    def tf_to_ts(self, ts):
+        if ts != None:
+            m = re.search('([\+\-]?)([0-9]+)([wdhm]?)', ts)
+            if m:
+                if not m.group(2):
+                    return None
+                val = int(m.group(2))
+                if m.group(3) == 'w':
+                    step = 7 * 24 * 60 * 60
+                elif m.group(3) == 'd':
+                    step = 24 * 60 * 60
+                elif m.group(3) == 'h':
+                    step = 60 * 60
+                elif m.group(3) == 'm':
+                    step = 60
+                else:
+                    step = 1
+                current = unix_time()
+                if m.group(1) == '-':
+                    ts = current - val * step
+                else:
+                    ts = current + val * step
+        return ts
+
     def activity_list(self, start, stop):
         self.log.debug("listing")
-        obj = {'cmd': 'activity-list',
-               'data': { 'time-start': today_starts_unix_time() }}
+        data = { }
+        start = self.tf_to_ts(start)
+        if start == None:
+            start = today_starts_unix_time()
+        data['time-start'] = start
+        stop = self.tf_to_ts(stop)
+        if stop != None:
+            data['time-stop'] = stop
+        obj = {'cmd': 'activity-list', 'data': data}
         recv = self.send(obj)
         if recv['status'] == 200 and 'data' in recv:
             self.list_report(recv['data'])
