@@ -145,14 +145,14 @@ class Vjk:
             }
             if len(vals) > 2:
                 data['comment'] = vals[2]
-            obj = { 'cmd': 'start', 'data': data }
+            obj = { 'cmd': 'activity-start', 'data': data }
             self.send(obj)
             return
 
     def stop(self):
         self.log.debug("stopping")
         obj = {
-            'cmd': 'stop',
+            'cmd': 'activity-stop',
             'data': {
                 'time': int(time.time())
             }
@@ -204,7 +204,7 @@ class Vjk:
 
     def list(self):
         self.log.debug("listing")
-        obj = {'cmd': 'list',
+        obj = {'cmd': 'activity-list',
                'data': { 'time-start': today_starts_unix_time() }}
         recv = self.send(obj)
         if recv['status'] == 200 and 'data' in recv:

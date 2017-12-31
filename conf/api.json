@@ -1,26 +1,27 @@
 {
-	"start": {
-		"cmd": "start",
-		"data": {
-			"time": "1509895799",
-			"activity": "psbm",
-			"category": "vz",
-			"comment": "sas32"
-		}
-	},
-	"stop": {
-		"cmd": "stop",
-		"data": {
-			"time": "1509895799"
-		}
-	},
-	"list": {
-		"cmd": "list",
-		"data": {
-			"time-start": "1509895699",
-			"time-stop":  "1509895799"
-		}
-	},
+	"activity": [
+		{
+			"cmd": "activity-start",
+			"data": {
+				"time": "1509895799",
+				"activity": "psbm",
+				"category": "vz",
+				"comment": "sas32"
+			}
+		},
+		{
+			"cmd": "activity-stop",
+			"data": {
+				"time": "1509895799"
+			}
+		},
+		{
+			"cmd": "activity-list",
+			"data": {
+				"time-start": "1509895699",
+				"time-stop":  "1509895799"
+			}
+		} ],
 	"reply": {
 		"status": 200,
 		"data": { }
