@@ -41,31 +41,25 @@ for cmd in ['stop']:
     spp = sp.add_parser(cmd, help = 'Stop current activity')
 
 for cmd in ['list']:
-    spp = sp.add_parser(cmd, help = 'List activities')
+    spp = sp.add_parser(cmd, help = 'List activities/categories')
+    spp.add_argument('--category', dest = 'category',
+                     help = 'Categories mode', action = 'store_true')
     spp.add_argument('--from', dest = 'from',
                      help = 'Time to report from. Format [-|+]number[d|h|m])')
     spp.add_argument('--to', dest = 'to',
                      help = 'Time to report until. Format [-|+]number[d|h|m])')
 
 for cmd in ['edit']:
-    spp = sp.add_parser(cmd, help = 'Edit entity')
-    sub = spp.add_subparsers(dest = 'edit_spp')
-    for cmd_edit in ['activity']:
-        subp = sub.add_parser(cmd_edit, help = 'Edit activity')
-        subp.add_argument('--id', dest = 'id', help = 'Activity ID')
-    for cmd_edit in ['category']:
-        subp = sub.add_parser(cmd_edit, help = 'Edit category')
-        subp.add_argument('--id', dest = 'id', help = 'Categoty ID')
+    spp = sp.add_parser(cmd, help = 'Edit activity/category')
+    spp.add_argument('--category', dest = 'category',
+                     help = 'Categories mode', action = 'store_true')
+    spp.add_argument('--id', dest = 'id', help = 'Activity/category ID')
 
 for cmd in ['delete']:
-    spp = sp.add_parser(cmd, help = 'Delete entity')
-    sub = spp.add_subparsers(dest = 'delete_spp')
-    for cmd_edit in ['activity']:
-        subp = sub.add_parser(cmd_edit, help = 'Delete activity')
-        subp.add_argument('--id', dest = 'id', help = 'Activity ID')
-    for cmd_edit in ['category']:
-        subp = sub.add_parser(cmd_edit, help = 'Delete category')
-        subp.add_argument('--id', dest = 'id', help = 'Categoty ID')
+    spp = sp.add_parser(cmd, help = 'Delete activity/category')
+    spp.add_argument('--category', dest = 'category',
+                     help = 'Categories mode', action = 'store_true')
+    spp.add_argument('--id', dest = 'id', help = 'Activity/category ID')
 
 for cmd in ['exit']:
     spp = sp.add_parser(cmd, help = 'Stop server')
