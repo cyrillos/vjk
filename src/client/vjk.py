@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import datetime
 import logging
 import pprint
 import socket
@@ -9,6 +10,8 @@ import time
 import sys
 import os
 import re
+
+from datetime import datetime
 
 def today_starts_unix_time():
     t = time.gmtime()
@@ -171,6 +174,9 @@ class Vjk:
         s -= m * 60
         return (h, m, s)
 
+    def strftime(self, ts):
+        return datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+
     def list_report(self, data):
         catlen = 8
         namelen = 4
@@ -184,10 +190,11 @@ class Vjk:
         fmt = "{1:<{0:}}{3:<{2:}}{5:<{4:}}{7:<{6:}}{9:<{8:}}"
         print(fmt.format(6, 'ID', (namelen + 2), 'Name',
                          catlen + 2, 'Category',
+                         22, 'Date',
                          14, 'Duration',
                          16, 'Comment'))
         for x in data:
-            if x['stop'] == None:
+            if (not 'stop' in x) or x['stop'] == None:
                 x['stop'] = int(time.time())
                 sign = ' *'
             else:
@@ -197,7 +204,9 @@ class Vjk:
             h, m, s = self.dts(int(x['stop']) - int(x['start']))
             hms = "{0:04d}:{1:02d}:{2:02d}{3:2s}".format(h, m, s, sign)
             print(fmt.format(6, x['id'], (namelen + 2), x['name'],
-                             catlen + 2, x['category'], 14, hms,
+                             catlen + 2, x['category'],
+                             22, self.strftime(int(x['start'])),
+                             14, hms,
                              16, x['comment']))
 
     def tf_to_ts(self, ts):
