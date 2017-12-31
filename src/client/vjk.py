@@ -125,7 +125,7 @@ class Vjk:
         self.log.debug("recv: %s" % (repr(recv)))
         return recv
 
-    def start(self, args):
+    def activity_start(self, args):
         self.log.debug("starting %s" % (repr(args)))
         if len(args) < 1:
             self.log.error("No arguments passed")
@@ -143,7 +143,7 @@ class Vjk:
             self.send(obj)
             return
 
-    def stop(self):
+    def activity_stop(self):
         self.log.debug("stopping")
         obj = {
             'cmd': 'activity-stop',
@@ -196,7 +196,7 @@ class Vjk:
                              catlen + 2, x['category'], 14, hms,
                              16, x['comment']))
 
-    def list(self):
+    def activity_list(self):
         self.log.debug("listing")
         obj = {'cmd': 'activity-list',
                'data': { 'time-start': today_starts_unix_time() }}
@@ -208,13 +208,13 @@ class Vjk:
 vjkcli = Vjk(logging, conf)
 
 if args.cmd == 'start':
-    vjkcli.start(unknown_args)
+    vjkcli.activity_start(unknown_args)
 
 if args.cmd == 'stop':
-    vjkcli.stop()
+    vjkcli.activity_stop()
 
 if args.cmd == 'exit':
     vjkcli.exit()
 
 if args.cmd == 'list':
-    vjkcli.list()
+    vjkcli.activity_list()
