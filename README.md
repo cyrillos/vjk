@@ -5,3 +5,7 @@
 ### Client
 
 ![Client](/docs/client.png)
+
+### Server
+
+![Server](/docs/server.png)
