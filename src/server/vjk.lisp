@@ -317,9 +317,16 @@
                        (ret-err "Failed to stop activity")))
         (ret-ok)))))
 
+(defparameter *prev-catid* nil)
+(defparameter *prev-rec* nil)
+
 (defun get-category-name (db catid)
-  (let ((rec (db-lookup-signle db "category" "id" "=" catid)))
-    (if rec (nth 1 rec) "")))
+  (if (eq *prev-catid* catid)
+      (if *prev-rec* (nth 1 *prev-rec*) "")
+      (let ((rec (db-lookup-signle db "category" "id" "=" catid)))
+        (setf *prev-catid* catid)
+        (setf *prev-rec* rec)
+        (if rec (nth 1 rec) ""))))
 
 (defun gen-activity-recs (args)
   (let ((enames (list "id" "category" "name" "comment" "start" "stop")))
