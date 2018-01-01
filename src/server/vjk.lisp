@@ -412,6 +412,18 @@
               :callback #'gen-category-recs
               :data (list db recs)) nil)))
 
+(defun category-update (db data)
+  (pr-debug "category-update ~a" data)
+  (let ((updated
+          (db-update db "category"
+                     '("name") '("=")
+                     (list (json-get "category" data))
+                     (json-get "id" data))))
+    (when (not updated)
+      (return-from category-update
+                   (ret-err "Unable to update category")))
+    (ret-ok)))
+
 (defun category-delete (db data)
   (pr-debug "category-delete ~a" data)
   (let ((recs (db-lookup db "activity"
@@ -452,6 +464,8 @@
            (activity-delete db data))
           ((string= "category-list" cmd)
            (category-list db data))
+          ((string= "category-update" cmd)
+           (category-update db data))
           ((string= "category-delete" cmd)
            (category-delete db data))
           ((string= "exit" cmd)
