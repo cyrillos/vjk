@@ -387,11 +387,18 @@
 
 (defun category-delete (db data)
   (pr-debug "category-delete ~a" data)
+  (let ((recs (db-lookup db "activity"
+                         '("catid")
+                         '("=")
+                         (list (json-get "id" data)) nil)))
+    (when recs
+      (return-from category-delete
+                   (ret-err "Clean activities first")))
   (db-delete db "category"
              '("id")
              '("=")
              (list (json-get "id" data)) nil)
-      (ret-ok))
+      (ret-ok)))
 
 (defun handle-request (db sk-ustream)
   (let* ((jdata (read-cmd sk-ustream))
