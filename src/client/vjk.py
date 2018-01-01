@@ -271,13 +271,13 @@ class Vjk:
             self.list_categories(recv['data'])
         return
 
-    def activity_delete(self, entry_id):
-        return
-
-    def category_delete(self, entry_id):
-        self.log.debug("category_delete")
-        obj = {'cmd': 'category-delete',
-               'data': { 'id': int(entry_id) }}
+    def delete(self, entry_id, is_category):
+        self.log.debug("delete")
+        obj = { 'data': { 'id': int(entry_id) }}
+        if is_category:
+            obj['cmd'] = 'category-delete'
+        else:
+            obj['cmd'] = 'activity-delete'
         self.send(obj)
         return
 
@@ -299,7 +299,4 @@ if args.cmd == 'list':
         vjkcli.category_list()
 
 if args.cmd == 'delete':
-    if args.category == False:
-        vjkcli.activity_delete(args.id)
-    else:
-        vjkcli.category_delete(args.id)
+    vjkcli.delete(args.id, args.category)
