@@ -163,6 +163,41 @@ class Vjk:
         self.send(obj)
         return
 
+    def activity_edit(self, entry_id, args):
+        self.log.debug("activity editing id %s %s" % (entry_id, repr(args)))
+        if len(args) < 1:
+            self.log.error("No arguments passed")
+            return
+        vals = re.split("@|,", args[0])
+        if len(vals) >= 2:
+            data = {
+                'id': int(entry_id),
+                'activity': vals[0],
+                'category': vals[1],
+            }
+            if len(vals) > 2:
+                data['comment'] = vals[2]
+            if len(vals) > 3:
+                data['time-start'] = vals[3]
+            if len(vals) > 4:
+                data['time-stop'] = vals[4]
+            obj = { 'cmd': 'activity-update', 'data': data }
+            self.send(obj)
+            return
+
+    def category_edit(self, entry_id, args):
+        self.log.debug("category editing id %s %s" % (entry_id, repr(args)))
+        if len(args) < 1:
+            self.log.error("No arguments passed")
+            return
+        data = {
+            'id': int(entry_id),
+            'category': args[0],
+        }
+        obj = { 'cmd': 'category-update', 'data': data }
+        self.send(obj)
+        return
+
     def exit(self):
         self.log.debug("exiting")
         obj = {'cmd': 'exit'}
@@ -297,6 +332,12 @@ if args.cmd == 'list':
         vjkcli.activity_list(args.start, args.stop)
     else:
         vjkcli.category_list()
+
+if args.cmd == 'edit':
+    if args.category == False:
+        vjkcli.activity_edit(args.id, unknown_args)
+    else:
+        vjkcli.category_edit(args.id, unknown_args)
 
 if args.cmd == 'delete':
     vjkcli.delete(args.id, args.category)
