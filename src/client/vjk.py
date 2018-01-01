@@ -59,13 +59,15 @@ for cmd in ['edit']:
     spp = sp.add_parser(cmd, help = 'Edit activity/category')
     spp.add_argument('--category', dest = 'category',
                      help = 'Categories mode', action = 'store_true')
-    spp.add_argument('--id', dest = 'id', help = 'Activity/category ID')
+    spp.add_argument('--id', dest = 'id', help = 'Activity/category ID',
+                     required = True)
 
 for cmd in ['delete']:
     spp = sp.add_parser(cmd, help = 'Delete activity/category')
     spp.add_argument('--category', dest = 'category',
                      help = 'Categories mode', action = 'store_true')
-    spp.add_argument('--id', dest = 'id', help = 'Activity/category ID')
+    spp.add_argument('--id', dest = 'id', help = 'Activity/category ID',
+                     required = True)
 
 for cmd in ['exit']:
     spp = sp.add_parser(cmd, help = 'Stop server')
@@ -269,6 +271,16 @@ class Vjk:
             self.list_categories(recv['data'])
         return
 
+    def activity_delete(self, entry_id):
+        return
+
+    def category_delete(self, entry_id):
+        self.log.debug("category_delete")
+        obj = {'cmd': 'category-delete',
+               'data': { 'id': int(entry_id) }}
+        self.send(obj)
+        return
+
 vjkcli = Vjk(logging, conf)
 
 if args.cmd == 'start':
@@ -285,3 +297,9 @@ if args.cmd == 'list':
         vjkcli.activity_list(args.start, args.stop)
     else:
         vjkcli.category_list()
+
+if args.cmd == 'delete':
+    if args.category == False:
+        vjkcli.activity_delete(args.id)
+    else:
+        vjkcli.category_delete(args.id)
