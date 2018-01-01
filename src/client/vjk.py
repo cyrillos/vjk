@@ -249,6 +249,26 @@ class Vjk:
             self.list_report(recv['data'])
         return
 
+    def list_categories(self, data):
+        catlen = 8
+        for x in data:
+            if len(x['category']) > catlen:
+               catlen = len(x['category'])
+        #
+        # id | name | category | lentgh
+        fmt = "{1:<{0:}}{3:<{2:}}"
+        print(fmt.format(6, 'ID', catlen + 2, 'Category'))
+        for x in data:
+            print(fmt.format(6, x['id'], catlen + 2, x['category']))
+
+    def category_list(self):
+        self.log.debug("category_list")
+        obj = {'cmd': 'category-list'}
+        recv = self.send(obj)
+        if recv['status'] == 200 and 'data' in recv:
+            self.list_categories(recv['data'])
+        return
+
 vjkcli = Vjk(logging, conf)
 
 if args.cmd == 'start':
@@ -263,3 +283,5 @@ if args.cmd == 'exit':
 if args.cmd == 'list':
     if args.category == False:
         vjkcli.activity_list(args.start, args.stop)
+    else:
+        vjkcli.category_list()

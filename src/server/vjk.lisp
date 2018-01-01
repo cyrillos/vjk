@@ -229,8 +229,10 @@
 
 (defun db-lookup (db table cols conds vals and-or)
   (ignore-errors
-    (let* ((fmt (concatenate 'string "select * from ~a where "
-                             "(~{~a~^ " and-or " ~});"))
+    (let* ((fmt (concatenate 'string "select * from ~a "
+                             (if (null conds) ""
+                                 (concatenate 'string "where (~{~a~^ " and-or " ~})"))
+                             ";"))
            (req (format nil fmt table (db-fmt-conds cols conds vals))))
       (pr-debug "db-lookup: ~a" req)
       (sqlite:execute-to-list db req))))
@@ -355,6 +357,28 @@
               :callback #'gen-activity-recs
               :data (list db recs)) nil)))
 
+(defun gen-category-recs (args)
+  (let ((enames (list "id" "category")))
+    (yason:with-array ()
+      (loop for x in (second args)
+          collect (yason:with-object ()
+                    (loop for y in x
+                          for z in enames
+                          when y
+                          collect (yason:encode-object-element z y)))))))
+
+(defun category-list (db data)
+  (pr-debug "category-list ~a" data)
+  (let ((recs
+          (db-lookup db "category"
+                     '("id" "name")
+                     nil nil nil)))
+    (when (not recs)
+      (return-from category-list (ret-ok)))
+    (values (json-encode-reply-ok
+              :callback #'gen-category-recs
+              :data (list db recs)) nil)))
+
 (defun handle-request (db sk-ustream)
   (let* ((jdata (read-cmd sk-ustream))
          (cmd (json-get "cmd" jdata))
@@ -366,6 +390,8 @@
            (activity-stop db data))
           ((string= "activity-list" cmd)
            (activity-list db data))
+          ((string= "category-list" cmd)
+           (category-list db data))
           ((string= "exit" cmd)
            (ret-ok :should-exit t))
           (t (ret-err (format nil "Unknown command ~a" cmd))))))
