@@ -400,6 +400,14 @@
              (list (json-get "id" data)) nil)
       (ret-ok)))
 
+(defun activity-delete (db data)
+  (pr-debug "activity-delete ~a" data)
+  (db-delete db "activity"
+             '("id")
+             '("=")
+             (list (json-get "id" data)) nil)
+      (ret-ok))
+
 (defun handle-request (db sk-ustream)
   (let* ((jdata (read-cmd sk-ustream))
          (cmd (json-get "cmd" jdata))
@@ -411,6 +419,8 @@
            (activity-stop db data))
           ((string= "activity-list" cmd)
            (activity-list db data))
+          ((string= "activity-delete" cmd)
+           (activity-delete db data))
           ((string= "category-list" cmd)
            (category-list db data))
           ((string= "category-delete" cmd)
