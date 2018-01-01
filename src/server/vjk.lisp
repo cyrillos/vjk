@@ -363,6 +363,33 @@
               :callback #'gen-activity-recs
               :data (list db recs)) nil)))
 
+(defun activity-update (db data)
+  (pr-debug "activity-update ~a" data)
+  (multiple-value-bind (id ts-start ts-stop activity category comment)
+    (values-list (mapcar #'(lambda(v) (json-get v data))
+                         '("id" "time-start" "time-stop"
+                           "activity" "category" "comment")))
+    (when (not id)
+      (return-from activity-update
+                   (ret-err "Missing activity id")))
+    (let ((catid (db-lookup-signle db "category" "name" "=" category)))
+        (when (and category (not catid))
+          (setf catid (db-insert db "category" '("name") (list category)))
+          (when (not catid)
+            (return-from activity-update
+                         (ret-err "Unable to write category"))))
+        (let ((updated
+                (db-update db "activity"
+                           '("catid" "name" "comment" "start" "stop")
+                           '("=" "=" "=" "=" "=")
+                           (list (car catid) activity comment
+                                 ts-start ts-stop)
+                           id)))
+          (when (not updated)
+            (return-from activity-update
+                         (ret-err "Unable to update activity")))
+          (ret-ok)))))
+
 (defun gen-category-recs (args)
   (let ((enames (list "id" "category")))
     (yason:with-array ()
@@ -419,6 +446,8 @@
            (activity-stop db data))
           ((string= "activity-list" cmd)
            (activity-list db data))
+          ((string= "activity-update" cmd)
+           (activity-update db data))
           ((string= "activity-delete" cmd)
            (activity-delete db data))
           ((string= "category-list" cmd)
