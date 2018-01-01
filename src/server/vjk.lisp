@@ -144,7 +144,7 @@
 ;;;
 ;;; Printing helpers
 ;;;
-(defparameter *loglevels* '(("debug" . 4) ("info" . 3) ("warn" . 2) ("error" . 1)))
+(defparameter *loglevels* '(("debug" . 3) ("info" . 2) ("warn" . 1) ("error" . 0)))
 
 (defun loglevel-decode (name)
   (cdr (assoc name *loglevels* :test #'equalp)))
