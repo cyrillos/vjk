@@ -227,15 +227,21 @@
                          vals)))
     res))
 
-(defun db-lookup (db table cols conds vals and-or)
+(defun db-op (db table op cols conds vals and-or)
   (ignore-errors
-    (let* ((fmt (concatenate 'string "select * from ~a "
+    (let* ((fmt (concatenate 'string op "from ~a "
                              (if (null conds) ""
                                  (concatenate 'string "where (~{~a~^ " and-or " ~})"))
                              ";"))
            (req (format nil fmt table (db-fmt-conds cols conds vals))))
-      (pr-debug "db-lookup: ~a" req)
+      (pr-debug "db-op: ~a" req)
       (sqlite:execute-to-list db req))))
+
+(defun db-lookup (db table cols conds vals and-or)
+  (db-op db table "select * " cols conds vals and-or))
+
+(defun db-delete (db table cols conds vals and-or)
+  (db-op db table "delete " cols conds vals and-or))
 
 (defun db-lookup-signle (db table col con val)
   (car (db-lookup db table (list col) (list con) (list val) nil)))
@@ -379,6 +385,14 @@
               :callback #'gen-category-recs
               :data (list db recs)) nil)))
 
+(defun category-delete (db data)
+  (pr-debug "category-delete ~a" data)
+  (db-delete db "category"
+             '("id")
+             '("=")
+             (list (json-get "id" data)) nil)
+      (ret-ok))
+
 (defun handle-request (db sk-ustream)
   (let* ((jdata (read-cmd sk-ustream))
          (cmd (json-get "cmd" jdata))
@@ -392,6 +406,8 @@
            (activity-list db data))
           ((string= "category-list" cmd)
            (category-list db data))
+          ((string= "category-delete" cmd)
+           (category-delete db data))
           ((string= "exit" cmd)
            (ret-ok :should-exit t))
           (t (ret-err (format nil "Unknown command ~a" cmd))))))
