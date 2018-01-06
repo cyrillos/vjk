@@ -33,6 +33,16 @@
 			}
 		},
 		{
+			"cmd": "activity-add",
+			"data": {
+				"time-start": "1509895699",
+				"time-stop":  "1509895799",
+				"activity": "psbm",
+				"category": "vz",
+				"comment": "sas32"
+			}
+		},
+		{
 			"cmd": "activity-list",
 			"data": {
 				"time-start": "1509895699",
