@@ -325,6 +325,28 @@
                        (ret-err "Failed to stop activity")))
         (ret-ok)))))
 
+(defun activity-add (db data)
+  (pr-debug "activity-add: ~a" data)
+  (multiple-value-bind (ts-start ts-stop activity category comment)
+    (values-list (mapcar #'(lambda(v) (json-get v data))
+                         '("time-start" "time-stop" "activity" "category" "comment")))
+    (when (not (and ts-start ts-stop activity category))
+      (return-from activity-add
+                   (ret-err "Missing timestamps, name or category")))
+    (let ((catid (db-lookup-signle db "category" "name" "=" category)))
+      (when (not catid)
+        (setf catid (db-insert db "category" '("name") (list category))))
+      (when (not catid)
+        (return-from activity-add
+                     (ret-err "Unable to write category")))
+      (let ((inserted (db-insert db "activity"
+                                 '("catid" "name" "comment" "start" "stop")
+                                 (list (car catid) activity comment ts-start ts-stop))))
+        (when (not inserted)
+          (return-from activity-add
+                       (ret-err "Unable to write activity")))
+        (ret-ok)))))
+
 (defparameter *prev-catid* nil)
 (defparameter *prev-rec* nil)
 
@@ -472,6 +494,8 @@
            (activity-stop db data))
           ((string= "activity-list" cmd)
            (activity-list db data))
+          ((string= "activity-add" cmd)
+           (activity-add db data))
           ((string= "activity-update" cmd)
            (activity-update db data))
           ((string= "activity-delete" cmd)
