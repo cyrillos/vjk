@@ -390,6 +390,20 @@
                          (ret-err "Unable to update activity")))
           (ret-ok)))))
 
+(defun category-add (db data)
+  (pr-debug "category-add ~a" data)
+  (let ((category (json-get "category" data)))
+    (when (not category)
+      (return-from category-add
+                   (ret-err "No category provided")))
+    (let ((inserted (db-insert db "category"
+                               '("name")
+                               (list category))))
+      (when (not inserted)
+        (return-from category-add
+                     (ret-err "Unable to write category")))
+        (ret-ok))))
+
 (defun gen-category-recs (args)
   (let ((enames (list "id" "category")))
     (yason:with-array ()
@@ -462,6 +476,8 @@
            (activity-update db data))
           ((string= "activity-delete" cmd)
            (activity-delete db data))
+          ((string= "category-add" cmd)
+           (category-add db data))
           ((string= "category-list" cmd)
            (category-list db data))
           ((string= "category-update" cmd)
