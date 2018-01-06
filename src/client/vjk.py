@@ -163,6 +163,29 @@ class Vjk:
             self.send(obj)
             return
 
+    def tsftime(self, timesting):
+        d = datetime.strptime(timesting, '%Y-%m-%d %H:%M:%S')
+        return int(d.timestamp())
+
+    def activity_add(self, start, stop, args):
+        self.log.debug("starting %s" % (repr(args)))
+        if len(args) < 1 or start == None or stop == None:
+            self.log.error("No arguments passed")
+            return
+        vals = re.split("@|,", args[0])
+        if len(vals) >= 2:
+            data = {
+                'time-start': self.tsftime(start),
+                'time-stop': self.tsftime(stop),
+                'activity': vals[0],
+                'category': vals[1],
+            }
+            if len(vals) > 2:
+                data['comment'] = vals[2]
+            obj = { 'cmd': 'activity-add', 'data': data }
+            self.send(obj)
+            return
+
     def activity_stop(self):
         self.log.debug("stopping")
         obj = {
@@ -355,7 +378,7 @@ if args.cmd == 'list':
 
 if args.cmd == 'add':
     if args.category == False:
-        vjkcli.activity_add(args.id, unknown_args)
+        vjkcli.activity_add(args.start, args.stop, unknown_args)
     else:
         vjkcli.category_add(unknown_args)
 
