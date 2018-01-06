@@ -55,6 +55,17 @@ for cmd in ['list']:
     spp.add_argument('--to', dest = 'stop',
                      help = 'Time to report until. Format [-|+]number[d|h|m])')
 
+for cmd in ['add']:
+    spp = sp.add_parser(cmd, help = 'Add activities/categories')
+    spp.add_argument('--category', dest = 'category',
+                     help = 'Categories mode', action = 'store_true')
+    spp.add_argument('--start', dest = 'start',
+                     help = 'Date and time activity started at. \
+                     Format [YYYY-MM-DD] hh:mm:ss.')
+    spp.add_argument('--stop', dest = 'stop',
+                     help = 'Date and time activity stopped at. \
+                     Format [YYYY-MM-DD] hh:mm:ss.')
+
 for cmd in ['edit']:
     spp = sp.add_parser(cmd, help = 'Edit activity/category')
     spp.add_argument('--category', dest = 'category',
@@ -306,6 +317,15 @@ class Vjk:
             self.list_categories(recv['data'])
         return
 
+    def category_add(self, args):
+        self.log.debug("category_add")
+        if len(args) < 1:
+            self.log.error("No arguments passed")
+            return
+        obj = {'cmd': 'category-add', 'data': {'category': args[0]}}
+        recv = self.send(obj)
+        return
+
     def delete(self, entry_id, is_category):
         self.log.debug("delete")
         obj = { 'data': { 'id': int(entry_id) }}
@@ -332,6 +352,12 @@ if args.cmd == 'list':
         vjkcli.activity_list(args.start, args.stop)
     else:
         vjkcli.category_list()
+
+if args.cmd == 'add':
+    if args.category == False:
+        vjkcli.activity_add(args.id, unknown_args)
+    else:
+        vjkcli.category_add(unknown_args)
 
 if args.cmd == 'edit':
     if args.category == False:
