@@ -155,7 +155,7 @@ class Vjk:
             data = {
                 'activity': vals[0],
                 'category': vals[1],
-                'time': int(time.time())
+                'time-start': int(time.time())
             }
             if len(vals) > 2:
                 data['comment'] = vals[2]
@@ -191,7 +191,7 @@ class Vjk:
         obj = {
             'cmd': 'activity-stop',
             'data': {
-                'time': int(time.time())
+                'time-stop': int(time.time())
             }
         }
         self.send(obj)

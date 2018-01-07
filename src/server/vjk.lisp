@@ -281,31 +281,33 @@
 (defmacro ret-ok(&key (should-exit nil))
   `(values (json-encode-reply-ok) ,should-exit))
 
-(defun activity-start (db data)
-  (pr-debug "activity-start: ~a" data)
-  (multiple-value-bind (ts activity category comment)
+(defun activity-insert (db data)
+  (pr-debug "activity-insert: ~a" data)
+  (multiple-value-bind (ts-start ts-stop activity category comment)
     (values-list (mapcar #'(lambda(v) (json-get v data))
-                         '("time" "activity" "category" "comment")))
-    (when (not (and ts activity category))
-      (return-from activity-start
-                   (ret-err "Missing timestamp, name or category")))
+                         '("time-start" "time-stop" "activity" "category" "comment")))
+    (when (not (and ts-start activity category))
+      (return-from activity-insert
+                   (ret-err "Missing timestamps, name or category")))
     (let ((catid (db-lookup-signle db "category" "name" "=" category)))
       (when (not catid)
         (setf catid (db-insert db "category" '("name") (list category))))
       (when (not catid)
-        (return-from activity-start
-                     (ret-err "Unable to write category")))
-      (let ((inserted (db-insert db "activity"
-                                 '("catid" "name" "comment" "start")
-                                 (list (car catid) activity comment ts))))
-        (when (not inserted)
-          (return-from activity-start
-                       (ret-err "Unable to write activity")))
-        (ret-ok)))))
+        (return-from activity-insert
+                     (ret-err "Unable to insert category")))
+      (let ((cols (list "catid" "name" "comment" "start" "stop"))
+            (vals (list (car catid) activity comment ts-start ts-stop)))
+        (let ((inserted (db-insert db "activity"
+                                   (loop for x in cols for y in vals when y collect x)
+                                   (loop for y in vals when y collect y))))
+          (when (not inserted)
+            (return-from activity-insert
+                         (ret-err "Unable to insert activity")))
+          (ret-ok))))))
 
 (defun activity-stop (db data)
   (pr-debug "activity-stop: ~a" data)
-  (let ((ts (json-get "time" data))
+  (let ((ts (json-get "time-stop" data))
         (actid (db-last-id db "activity")))
     (when (not ts)
       (return-from activity-stop
@@ -323,28 +325,6 @@
         (when (not updated)
            (return-from activity-stop
                        (ret-err "Failed to stop activity")))
-        (ret-ok)))))
-
-(defun activity-add (db data)
-  (pr-debug "activity-add: ~a" data)
-  (multiple-value-bind (ts-start ts-stop activity category comment)
-    (values-list (mapcar #'(lambda(v) (json-get v data))
-                         '("time-start" "time-stop" "activity" "category" "comment")))
-    (when (not (and ts-start ts-stop activity category))
-      (return-from activity-add
-                   (ret-err "Missing timestamps, name or category")))
-    (let ((catid (db-lookup-signle db "category" "name" "=" category)))
-      (when (not catid)
-        (setf catid (db-insert db "category" '("name") (list category))))
-      (when (not catid)
-        (return-from activity-add
-                     (ret-err "Unable to write category")))
-      (let ((inserted (db-insert db "activity"
-                                 '("catid" "name" "comment" "start" "stop")
-                                 (list (car catid) activity comment ts-start ts-stop))))
-        (when (not inserted)
-          (return-from activity-add
-                       (ret-err "Unable to write activity")))
         (ret-ok)))))
 
 (defparameter *prev-catid* nil)
@@ -488,14 +468,14 @@
          (cmd (json-get "cmd" jdata))
          (data (json-get "data" jdata)))
     (pr-debug "handle-request: cmd ~a data ~a" cmd data)
-    (cond ((string= "activity-start" cmd)
-           (activity-start db data))
+    (cond ((string= "activity-add" cmd)
+           (activity-insert db data))
+          ((string= "activity-start" cmd)
+           (activity-insert db data))
           ((string= "activity-stop" cmd)
            (activity-stop db data))
           ((string= "activity-list" cmd)
            (activity-list db data))
-          ((string= "activity-add" cmd)
-           (activity-add db data))
           ((string= "activity-update" cmd)
            (activity-update db data))
           ((string= "activity-delete" cmd)

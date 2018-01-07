@@ -1,9 +1,19 @@
 {
 	"activity": [
 		{
+			"cmd": "activity-add",
+			"data": {
+				"time-start": "1509895699",
+				"time-stop":  "1509895799",
+				"activity": "psbm",
+				"category": "vz",
+				"comment": "sas32"
+			}
+		},
+		{
 			"cmd": "activity-start",
 			"data": {
-				"time": "1509895799",
+				"time-start": "1509895699",
 				"activity": "psbm",
 				"category": "vz",
 				"comment": "sas32"
@@ -12,7 +22,7 @@
 		{
 			"cmd": "activity-stop",
 			"data": {
-				"time": "1509895799"
+				"time-stop": "1509895799"
 			}
 		},
 		{
@@ -25,16 +35,6 @@
 			"cmd": "activity-update",
 			"data": {
 				"id": "1",
-				"time-start": "1509895699",
-				"time-stop":  "1509895799",
-				"activity": "psbm",
-				"category": "vz",
-				"comment": "sas32"
-			}
-		},
-		{
-			"cmd": "activity-add",
-			"data": {
 				"time-start": "1509895699",
 				"time-stop":  "1509895799",
 				"activity": "psbm",
