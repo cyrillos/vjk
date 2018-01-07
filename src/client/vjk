@@ -1,0 +1,463 @@
+#!/usr/bin/python3
+
+import argparse
+import datetime
+import logging
+import pprint
+import json
+import time
+import sys
+import os
+import re
+
+from datetime import datetime
+
+import vjk
+
+def get_loglevel(num):
+    lvl_nums = {
+        4: logging.DEBUG,
+        3: logging.DEBUG,
+        2: logging.INFO,
+        1: logging.WARNING,
+        0: logging.ERROR,
+    }
+    if num in lvl_nums:
+        return lvl_nums[num]
+    return logging.ERROR
+
+parser = argparse.ArgumentParser(prog='vjk.py')
+
+parser.add_argument('--conf', dest = 'conf',
+                    default = 'conf/vjk.json',
+                    help = 'configuration file in JSON format')
+
+sp = parser.add_subparsers(dest = 'cmd')
+for cmd in ['start']:
+    spp = sp.add_parser(cmd, help = 'Start an activity. Format "activity@category,comment".')
+
+for cmd in ['stop']:
+    spp = sp.add_parser(cmd, help = 'Stop the current activity if running.')
+
+for cmd in ['list']:
+    spp = sp.add_parser(cmd, help = 'List activities/categories')
+    spp.add_argument('--category', dest = 'category',
+                     help = 'Category mode', action = 'store_true')
+    spp.add_argument('--long', dest = 'long',
+                     help = 'Long output for time records.', action = 'store_true')
+    spp.add_argument('--start', dest = 'start',
+                     help = 'Time to report from. Format [-|+]number[d|h|m])')
+    spp.add_argument('--stop', dest = 'stop',
+                     help = 'Time to report until. Format [-|+]number[d|h|m])')
+
+for cmd in ['add']:
+    spp = sp.add_parser(cmd, help = 'Add activities/categories')
+    spp.add_argument('--category', dest = 'category',
+                     help = 'Category mode', action = 'store_true')
+    spp.add_argument('--start', dest = 'start',
+                     help = 'Date and time activity started at. \
+                     Format [YYYY-MM-DD] hh:mm:ss.')
+    spp.add_argument('--stop', dest = 'stop',
+                     help = 'Date and time activity stopped at. \
+                     Format [YYYY-MM-DD] hh:mm:ss.')
+
+for cmd in ['edit']:
+    spp = sp.add_parser(cmd, help = 'Edit activity/category')
+    spp.add_argument('--category', dest = 'category',
+                     help = 'Category mode', action = 'store_true')
+    spp.add_argument('--start', dest = 'start',
+                     help = 'Date and time activity started at. \
+                     Format [YYYY-MM-DD] hh:mm:ss.')
+    spp.add_argument('--stop', dest = 'stop',
+                     help = 'Date and time activity stopped at. \
+                     Format [YYYY-MM-DD] hh:mm:ss.')
+    spp.add_argument('--id', dest = 'id', help = 'Activity/category ID',
+                     required = True)
+
+for cmd in ['delete']:
+    spp = sp.add_parser(cmd, help = 'Delete activity/category')
+    spp.add_argument('--category', dest = 'category',
+                     help = 'Category mode', action = 'store_true')
+    spp.add_argument('--id', dest = 'id', help = 'Activity/category ID',
+                     required = True)
+
+for cmd in ['exit']:
+    spp = sp.add_parser(cmd, help = 'Stop the server')
+
+args, unknown_args = parser.parse_known_args()
+if args.cmd == None:
+    parser.print_help()
+    sys.exit(1)
+
+conf = []
+
+if args.conf != None and os.path.isfile(args.conf):
+    with open(args.conf) as f:
+        conf = json.load(f)
+else:
+    if 'VJKCONF' in os.environ:
+        with open(os.environ['VJKCONF']) as f:
+            conf = json.load(f)
+    else:
+        logging.error("Provide server configuration")
+        sys.exit(1)
+
+if 'loglevel' not in conf:
+    loglevel = logging.DEBUG
+else:
+    loglevel = get_loglevel(conf['loglevel'])
+
+logging.basicConfig(format = '%(asctime)s %(filename)s %(funcName)s %(message)s',
+                    datefmt = '%m/%d/%Y %H:%M:%S', level = loglevel)
+
+logging.debug('Configuration')
+logging.debug(pprint.pformat(conf))
+logging.debug(pprint.pformat(args))
+
+#    def tsftime(self, timesting):
+#        d = datetime.strptime(timesting, '%Y-%m-%d %H:%M:%S')
+#        return int(d.timestamp())
+#
+#    def activity_add(self, start, stop, args):
+#        self.log.debug("starting %s" % (repr(args)))
+#        if len(args) < 1 or start == None or stop == None:
+#            self.log.error("No arguments passed")
+#            return
+#        vals = re.split("@|,", args[0])
+#        if len(vals) >= 2:
+#            data = {
+#                'time-start': self.tsftime(start),
+#                'time-stop': self.tsftime(stop),
+#                'activity': vals[0],
+#                'category': vals[1],
+#            }
+#            if len(vals) > 2:
+#                data['comment'] = vals[2]
+#            obj = { 'cmd': 'activity-add', 'data': data }
+#            self.send(obj)
+#            return
+#
+#    def activity_edit(self, entry_id, args):
+#        self.log.debug("activity editing id %s %s" % (entry_id, repr(args)))
+#        if len(args) < 1:
+#            self.log.error("No arguments passed")
+#            return
+#        vals = re.split("@|,", args[0])
+#        if len(vals) >= 2:
+#            data = {
+#                'id': int(entry_id),
+#                'activity': vals[0],
+#                'category': vals[1],
+#            }
+#            if len(vals) > 2:
+#                data['comment'] = vals[2]
+#            if len(vals) > 3:
+#                data['time-start'] = vals[3]
+#            if len(vals) > 4:
+#                data['time-stop'] = vals[4]
+#            obj = { 'cmd': 'activity-update', 'data': data }
+#            self.send(obj)
+#            return
+#
+#    def category_edit(self, entry_id, args):
+#        self.log.debug("category editing id %s %s" % (entry_id, repr(args)))
+#        if len(args) < 1:
+#            self.log.error("No arguments passed")
+#            return
+#        data = {
+#            'id': int(entry_id),
+#            'category': args[0],
+#        }
+#        obj = { 'cmd': 'category-update', 'data': data }
+#        self.send(obj)
+#        return
+#
+#    def category_add(self, args):
+#        self.log.debug("category_add")
+#        if len(args) < 1:
+#            self.log.error("No arguments passed")
+#            return
+#        obj = {'cmd': 'category-add', 'data': {'category': args[0]}}
+#        recv = self.send(obj)
+#        return
+#
+#    def delete(self, entry_id, is_category):
+#        self.log.debug("delete")
+#        obj = { 'data': { 'id': int(entry_id) }}
+#        if is_category:
+#            obj['cmd'] = 'category-delete'
+#        else:
+#            obj['cmd'] = 'activity-delete'
+#        self.send(obj)
+#        return
+#
+
+def get_dict_value(d, k, e, f):
+    if k in d:
+        if f == None:
+            return d[k]
+        return f(d[k], k)
+    return e
+
+def dict_value(d, k):
+    return get_dict_value(d, k, '', None)
+
+def reply_ok(reply):
+    if reply == None or 'status' not in reply:
+        return False
+    return reply['status'] == 200
+
+def reply_err(reply):
+    if reply == None:
+        logging.error("ERR: Reply is empty")
+    else:
+        if 'status' in reply:
+            status = reply['status']
+        else:
+            status = ""
+        if 'data' in reply:
+            data = reply['data']
+        else:
+            data = ""
+        logging.error("ERR: Reply status %s data %s" % (status, data))
+    sys.exit(1)
+
+def seconds_to_hms(seconds):
+    h = seconds // 3600
+    seconds -= h * 3600
+    m = seconds // 60
+    seconds -= m * 60
+    return (h, m, seconds)
+
+def strftime_long(timestamp):
+    if timestamp == None:
+        return ''
+    return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+def strftime_short(timestamp):
+    if timestamp == None:
+        return ''
+    return datetime.fromtimestamp(timestamp).strftime('%H:%M:%S')
+
+def current_unix_time():
+    return int(time.time())
+
+def today_starts_unix_time():
+    t = time.gmtime()
+    return int(time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
+                            t.tm_wday, t.tm_yday, t.tm_isdst)))
+
+def today_ends_unix_time():
+    t = time.gmtime()
+    return int(time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 23, 59, 59,
+                            t.tm_wday, t.tm_yday, t.tm_isdst)))
+
+def relative_to_ts(relative):
+    if relative != None:
+        m = re.search('([\+\-]?)([0-9]+)([wdhm]?)', relative)
+        if m:
+            if not m.group(2):
+                return None
+            val = int(m.group(2))
+            if m.group(3) == 'w':
+                step = 7 * 24 * 60 * 60
+            elif m.group(3) == 'd':
+                step = 24 * 60 * 60
+            elif m.group(3) == 'h':
+                step = 60 * 60
+            elif m.group(3) == 'm':
+                step = 60
+            else:
+                step = 1
+            current = current_unix_time()
+            if m.group(1) == '-':
+                relative = current - val * step
+            else:
+                relative = current + val * step
+    return relative
+
+def cmd_handler_invalid(vjkcli, args, unknown_args):
+    parser.print_help()
+    sys.exit(1)
+
+def cmd_handler_activity_list(vjkcli, args, unknown_args):
+    ts_start = relative_to_ts(args.start)
+    if ts_start == None:
+        ts_start = today_starts_unix_time()
+    ts_stop = relative_to_ts(args.stop)
+    if ts_stop == None:
+        ts_stop = today_ends_unix_time()
+
+    reply = vjkcli.activity_list(ts_start, ts_stop)
+    if not reply_ok(reply):
+        reply_err(reply)
+    if not 'data' in reply:
+        return
+
+    if args.long:
+        ts_len = 22
+    else:
+        ts_len = 10
+    catlen = 8
+    namelen = 4
+    for x in reply['data']:
+        catlen = max(len(dict_value(x, 'category')), catlen)
+        namelen = max(len(dict_value(x, 'name')), namelen)
+
+    fmt = "{1:<{0:}}{3:<{2:}}{5:<{4:}}{7:<{6:}}{9:<{8:}}{11:<{10:}}"
+    print(fmt.format(6, 'ID',
+                     (namelen + 2), 'Name',
+                     catlen + 2, 'Category',
+                     ts_len, 'Start',
+                     ts_len, 'Stop',
+                     14, 'Duration',
+                     16, 'Comment'))
+
+    for x in reply['data']:
+        if not 'start' in x or x['start'] == None:
+            continue
+        ts_start = int(x['start'])
+        if not 'stop' in x or x['stop'] == None:
+            ts_stop = current_unix_time()
+            ts_stop_virt = None
+        else:
+            ts_stop = int(x['stop'])
+            ts_stop_virt = ts_stop
+
+        if args.long:
+            ts_start_str = strftime_long(ts_start)
+            ts_stop_str = strftime_long(ts_stop_virt)
+        else:
+            ts_start_str = strftime_short(ts_start)
+            ts_stop_str = strftime_short(ts_stop_virt)
+
+        h, m, s = seconds_to_hms(ts_stop - ts_start)
+        hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
+
+        print(fmt.format(6, x['id'],
+                         (namelen + 2), dict_value(x, 'name'),
+                         catlen + 2, dict_value(x, 'category'),
+                         ts_len, ts_start_str,
+                         ts_len, ts_stop_str,
+                         14, hms,
+                         16, dict_value(x,'comment')))
+
+def cmd_handler_category_list(vjkcli, args, unknown_args):
+    reply = vjkcli.category_list()
+    if not reply_ok(reply):
+        reply_err(reply)
+    if not 'data' in reply:
+        return
+
+    catlen = 8
+    for x in reply['data']:
+        catlen = max(len(dict_value(x, 'category')), catlen)
+
+    fmt = "{1:<{0:}}{3:<{2:}}"
+    print(fmt.format(6, 'ID', catlen + 2, 'Category'))
+
+    for x in reply['data']:
+        print(fmt.format(6, dict_value(x, 'id'),
+                         catlen + 2, dict_value(x, 'category')))
+
+def cmd_handler_delete_record(vjkcli, args, unknown_args):
+    if args.category:
+        vjkcli.category_delete(int(args.id))
+    else:
+        vjkcli.activity_delete(int(args.id))
+
+def cmd_handler_server_exit(vjkcli, args, unknown_args):
+    vjkcli.server_exit()
+
+def parse_activity_argument(arg):
+    vals = re.split("@|,", arg)
+    if len(vals) <= 2:
+        return (None, None, None)
+    activity = vals[0]
+    category = vals[1]
+    if len(vals) > 2:
+        comment = vals[2]
+    else:
+        comment = None
+    return (activity, category, comment)
+
+def cmd_handler_activity_start(vjkcli, args, unknown_args):
+    if len(unknown_args) < 1:
+        logger.error("Not enough arguments provided")
+        return
+    activity, category, comment = parse_activity_argument(unknown_args[0])
+    if activity == None:
+        logger.error("Wrong activity format")
+        return
+    vjkcli.activity_add(current_unix_time(), None,
+                        activity, category, comment)
+
+def cmd_handler_activity_stop(vjkcli, args, unknown_args):
+    vjkcli.activity_stop(current_unix_time())
+    return
+
+def cmd_handler_activity_add(vjkcli, args, unknown_args):
+    if len(unknown_args) < 1 or args.start == None:
+        logger.error("Not enough arguments provided")
+        return
+    activity, category, comment = parse_activity_argument(unknown_args[0])
+    if activity == None:
+        logger.error("Wrong activity format")
+        return
+    vjkcli.activity_add(args.start, args.stop,
+                        activity, category, comment)
+
+def cmd_handler_activity_add(vjkcli, args, unknown_args):
+    if len(unknown_args) < 1 or args.start == None:
+        logger.error("Not enough arguments provided")
+        return
+    activity, category, comment = parse_activity_argument(unknown_args[0])
+    if activity == None:
+        logger.error("Wrong activity format")
+        return
+    vjkcli.activity_add(args.start, args.stop,
+                        activity, category, comment)
+
+def cmd_handler_category_add(vjkcli, args, unknown_args):
+    if len(unknown_args) < 1:
+        logger.error("Not enough arguments provided")
+        return
+    vjkcli.category_add(unknown_args[0])
+
+def cmd_handler_activity_edit(vjkcli, args, unknown_args):
+    if len(unknown_args) > 0:
+        activity, category, comment = parse_activity_argument(unknown_args[0])
+    else:
+        activity, category, comment = (None, None, None)
+    vjkcli.activity_update(args.id, args.start, args.stop,
+                           activity, category, comment)
+
+def cmd_handler_category_edit(vjkcli, args, unknown_args):
+    if len(unknown_args) < 1:
+        logger.error("Not enough arguments provided")
+        return
+    vjkcli.category_add(args.id, unknown_args[0])
+
+cmd_handler = {
+    'list':     [True, cmd_handler_activity_list, cmd_handler_category_list],
+    'delete':   [True, cmd_handler_delete_record, cmd_handler_delete_record],
+    'exit':     [False, cmd_handler_server_exit, cmd_handler_invalid],
+    'start':    [False, cmd_handler_activity_start, cmd_handler_invalid],
+    'stop':     [False, cmd_handler_activity_stop, cmd_handler_invalid],
+    'add':      [True, cmd_handler_activity_add, cmd_handler_category_add],
+    'edit':     [True, cmd_handler_activity_edit, cmd_handler_category_edit],
+}
+
+vjkcli = vjk.Vjk(logging, conf)
+if vjkcli.connected() == False:
+    logging.error("Not connected")
+    sys.exit(1)
+
+if args.cmd in cmd_handler:
+    if cmd_handler[args.cmd][0]:
+        if args.category:
+            cmd_handler[args.cmd][2](vjkcli, args, unknown_args)
+        else:
+            cmd_handler[args.cmd][1](vjkcli, args, unknown_args)
+    else:
+        cmd_handler[args.cmd][1](vjkcli, args, unknown_args)
