@@ -398,13 +398,17 @@
     (when (not category)
       (return-from category-add
                    (ret-err "No category provided")))
-    (let ((inserted (db-insert db "category"
-                               '("name")
-                               (list category))))
-      (when (not inserted)
+    (let ((catid (db-lookup-signle db "category" "name" "=" category)))
+      (when catid
         (return-from category-add
-                     (ret-err "Unable to write category")))
-        (ret-ok))))
+                     (ret-err "Category already exists")))
+      (let ((inserted (db-insert db "category"
+                                 '("name")
+                                 (list category))))
+        (when (not inserted)
+          (return-from category-add
+                       (ret-err "Unable to write category")))
+        (ret-ok)))))
 
 (defun gen-category-recs (args)
   (let ((enames (list "id" "category")))
