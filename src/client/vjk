@@ -35,7 +35,7 @@ parser.add_argument('--conf', dest = 'conf',
 sp = parser.add_subparsers(dest = 'cmd')
 for cmd in ['start']:
     spp = sp.add_parser(cmd, help = 'Start an activity. \
-                        Format "activity@category|comment".')
+                        Format "activity@category,comment".')
 
 for cmd in ['stop']:
     spp = sp.add_parser(cmd, help = 'Stop the current activity if running.')
@@ -172,7 +172,11 @@ def unixfstr_short(time_string):
     if time_string == None:
         return None
     d = datetime.strptime(time_string, '%H:%M:%S')
-    return int(time.mktime(d.timetuple()))
+    t1 = d.timetuple()
+    t2 = time.gmtime()
+    return int(time.mktime((t2.tm_year, t2.tm_mon, t2.tm_mday,
+                            t1.tm_hour, t1.tm_min, t1.tm_sec,
+                            t2.tm_wday, t2.tm_yday, t2.tm_isdst)))
 
 def current_unix_time():
     return int(time.time())
@@ -304,7 +308,7 @@ def cmd_handler_server_exit(vjkcli, args, unknown_args):
 
 def parse_activity_argument(arg):
     # activity@category|comment
-    m = re.match("(\w+)?\@?(\w+)?\|?(.+)?", arg)
+    m = re.match("(\w+)?\@?(\w+)?\,?(.+)?", arg)
     if m == None or m.group(1) == None or m.group(2) == None:
         return (None, None, None)
     return (m.group(1), m.group(2), m.group(3))
