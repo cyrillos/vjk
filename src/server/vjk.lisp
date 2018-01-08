@@ -353,17 +353,21 @@
 
 (defun activity-list (db data)
   (pr-debug "activity-list: ~a" data)
-  (let ((recs
-          (db-lookup db "activity"
-                     '("start" "stop")
-                     '(">=" "<=")
-                     (list (json-get "time-start" data)
-                           (json-get "time-stop" data)) nil)))
-    (when (not recs)
-      (return-from activity-list (ret-ok)))
-    (values (json-encode-reply-ok
-              :callback #'gen-activity-recs
-              :data (list db recs)) nil)))
+  (let ((ts-start (json-get "time-start" data))
+        (ts-stop (json-get "time-stop" data)))
+    (when (not (and ts-start ts-stop))
+      (return-from activity-list
+                   (ret-err "Missing time start/stop parameters")))
+    (let ((recs
+            (db-lookup db "activity"
+                       '("start" "stop")
+                       '(">=" "<=")
+                       (list ts-start ts-stop) nil)))
+      (when (not recs)
+        (return-from activity-list (ret-ok)))
+      (values (json-encode-reply-ok
+                :callback #'gen-activity-recs
+                :data (list db recs)) nil))))
 
 (defun activity-update (db data)
   (pr-debug "activity-update ~a" data)
