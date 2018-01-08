@@ -304,7 +304,7 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         catlen = max(len(dict_value(x, 'category')), catlen)
         namelen = max(len(dict_value(x, 'name')), namelen)
 
-    fmt = "{1:<{0:}}{3:<{2:}}{5:<{4:}}{7:<{6:}}{9:<{8:}}{11:<{10:}}"
+    fmt = "{1:<{0:}}{3:<{2:}}{5:<{4:}}{7:<{6:}}{9:<{8:}}{11:<{10:}}{13:<{12:}}"
     print(fmt.format(6, 'ID',
                      (namelen + 2), 'Name',
                      catlen + 2, 'Category',
