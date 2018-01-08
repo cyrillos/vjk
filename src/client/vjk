@@ -162,6 +162,18 @@ def strftime_short(timestamp):
         return ''
     return datetime.fromtimestamp(timestamp).strftime('%H:%M:%S')
 
+def unixfstr_long(time_string):
+    if time_string == None:
+        return None
+    d = datetime.strptime(time_string, '%Y-%m-%d %H:%M:%S')
+    return int(time.mktime(d.timetuple()))
+
+def unixfstr_short(time_string):
+    if time_string == None:
+        return None
+    d = datetime.strptime(time_string, '%H:%M:%S')
+    return int(time.mktime(d.timetuple()))
+
 def current_unix_time():
     return int(time.time())
 
@@ -345,7 +357,8 @@ def cmd_handler_activity_edit(vjkcli, args, unknown_args):
         activity, category, comment = parse_activity_argument(unknown_args[0])
     else:
         activity, category, comment = (None, None, None)
-    vjkcli.activity_update(args.id, args.start, args.stop,
+    vjkcli.activity_update(args.id, unixfstr_long(args.start),
+                           unixfstr_long(args.stop),
                            activity, category, comment)
 
 def cmd_handler_category_edit(vjkcli, args, unknown_args):

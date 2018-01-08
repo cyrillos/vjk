@@ -81,7 +81,9 @@ class Vjk:
             return None
         data = { 'id': eid }
         if activity:
-            data['activity'] = time_start
+            data['activity'] = activity
+        if category:
+            data['category'] = category
         if time_start:
             data['time-start'] = time_start
         if time_stop:
