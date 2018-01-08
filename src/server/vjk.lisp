@@ -212,12 +212,14 @@
 ;;              @name
 ;;              @comment
 
-(defun db-fmt-conds (cols conds vals)
+(defun db-fmt-conds (cols conds vals &key allow-nils)
   (loop for x in cols for y in conds for z in vals
-        when (and x y z)
+        when (if allow-nils (and x y) (and x y z))
         collect (values (if (typep z 'string)
                               (format nil "~a~a~s" x y z)
-                              (format nil "~a~a~a" x y z)))))
+                              (if (and allow-nils (null z))
+                                  (format nil "~a~anull" x y)
+                                  (format nil "~a~a~a" x y z))))))
 
 (defun db-fmt-vals (vals)
   (let ((res (mapcar #'(lambda (v)
@@ -258,7 +260,7 @@
 (defun db-update (db table cols conds vals id)
   (ignore-errors
     (let ((req (format nil "update ~a set ~{~a~^, ~} where id=~d;"
-                       table (db-fmt-conds cols conds vals) id)))
+                       table (db-fmt-conds cols conds vals :allow-nils t) id)))
       (pr-debug "db-update: ~a" req)
       (sqlite:execute-non-query db req)
       (sqlite:last-insert-rowid db))))
@@ -375,9 +377,9 @@
     (values-list (mapcar #'(lambda(v) (json-get v data))
                          '("id" "time-start" "time-stop"
                            "activity" "category" "comment")))
-    (when (not id)
+    (when (not (and id ts-start activity category))
       (return-from activity-update
-                   (ret-err "Missing activity id")))
+                   (ret-err "Missing activity id, start, activity or category")))
     (let ((catid (db-lookup-signle db "category" "name" "=" category)))
         (when (and category (not catid))
           (setf catid (db-insert db "category" '("name") (list category)))
@@ -438,38 +440,51 @@
 
 (defun category-update (db data)
   (pr-debug "category-update ~a" data)
-  (let ((updated
-          (db-update db "category"
-                     '("name") '("=")
-                     (list (json-get "category" data))
-                     (json-get "id" data))))
-    (when (not updated)
+  (let ((name (json-get "category" data))
+        (id (json-get "id" data)))
+    (when (not (and id name))
       (return-from category-update
-                   (ret-err "Unable to update category")))
-    (ret-ok)))
+                   (ret-err "No category or id provided")))
+    (let ((updated
+            (db-update db "category"
+                       '("name") '("=")
+                       (list name)
+                       id)))
+      (when (not updated)
+        (return-from category-update
+                     (ret-err "Unable to update category")))
+    (ret-ok))))
 
 (defun category-delete (db data)
   (pr-debug "category-delete ~a" data)
-  (let ((recs (db-lookup db "activity"
-                         '("catid")
-                         '("=")
-                         (list (json-get "id" data)) nil)))
-    (when recs
+  (let ((id (json-get "id" data)))
+    (when (null id)
       (return-from category-delete
-                   (ret-err "Clean activities first")))
-  (db-delete db "category"
-             '("id")
-             '("=")
-             (list (json-get "id" data)) nil)
-      (ret-ok)))
+                   (ret-err "No category id provided")))
+    (let ((recs (db-lookup db "activity"
+                           '("catid")
+                           '("=")
+                           (list id) nil)))
+      (when recs
+        (return-from category-delete
+                     (ret-err "Clean activities first")))
+      (db-delete db "category"
+                 '("id")
+                 '("=")
+                 (list id) nil)
+      (ret-ok))))
 
 (defun activity-delete (db data)
   (pr-debug "activity-delete ~a" data)
-  (db-delete db "activity"
-             '("id")
-             '("=")
-             (list (json-get "id" data)) nil)
-      (ret-ok))
+  (let ((id (json-get "id" data)))
+    (when (null id)
+      (return-from activity-delete
+                   (ret-err "No activity id provided")))
+    (db-delete db "activity"
+               '("id")
+               '("=")
+               (list id) nil)
+    (ret-ok)))
 
 (defun handle-request (db sk-ustream)
   (let* ((jdata (read-cmd sk-ustream))
