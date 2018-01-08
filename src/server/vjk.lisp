@@ -355,7 +355,7 @@
   (pr-debug "activity-list: ~a" data)
   (let ((ts-start (json-get "time-start" data))
         (ts-stop (json-get "time-stop" data)))
-    (when (not (and ts-start ts-stop))
+    (when (not ts-start)
       (return-from activity-list
                    (ret-err "Missing time start/stop parameters")))
     (let ((recs
