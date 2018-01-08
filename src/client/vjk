@@ -208,8 +208,6 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
     if ts_start == None:
         ts_start = today_starts_unix_time()
     ts_stop = relative_to_ts(args.stop)
-    if ts_stop == None:
-        ts_stop = today_ends_unix_time()
 
     reply = vjkcli.activity_list(ts_start, ts_stop)
     if not reply_ok(reply):
