@@ -49,7 +49,7 @@ class Vjk:
                      activity, category, comment):
         self.log.debug("Vjk: activity_add: %s %s %s %s %s" %
                        (repr(time_start), repr(time_stop),
-                       (repr(activity), repr(category), repr(comment))))
+                        repr(activity), repr(category), repr(comment)))
         if time_start == None or activity == None or category == None:
             return None
         data = {
@@ -76,7 +76,7 @@ class Vjk:
                         activity, category, comment):
         self.log.debug("Vjk: activity_update: %s %s %s %s %s %s" %
                        (repr(eid), repr(time_start), repr(time_stop),
-                       (repr(activity), repr(category), repr(comment))))
+                        repr(activity), repr(category), repr(comment)))
         if eid == None:
             return None
         data = { 'id': eid }
