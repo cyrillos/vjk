@@ -69,7 +69,7 @@ class Vjk:
         if time_stop == None:
             return None
         data = { 'time-stop': time_stop }
-        obj = { 'cmd': 'activity-start', 'data': data }
+        obj = { 'cmd': 'activity-stop', 'data': data }
         return self.send(obj)
 
     def activity_update(self, eid, time_start, time_stop,
