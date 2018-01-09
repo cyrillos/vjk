@@ -315,11 +315,11 @@ def parse_activity_argument(arg):
 
 def cmd_handler_activity_start(vjkcli, args, unknown_args):
     if len(unknown_args) < 1:
-        logger.error("Not enough arguments provided")
+        logging.error("Not enough arguments provided")
         return
     activity, category, comment = parse_activity_argument(unknown_args[0])
     if activity == None:
-        logger.error("Wrong activity format")
+        logging.error("Wrong activity format")
         return
     vjkcli.activity_add(current_unix_time(), None,
                         activity, category, comment)
@@ -330,29 +330,29 @@ def cmd_handler_activity_stop(vjkcli, args, unknown_args):
 
 def cmd_handler_activity_add(vjkcli, args, unknown_args):
     if len(unknown_args) < 1 or args.start == None:
-        logger.error("Not enough arguments provided")
+        logging.error("Not enough arguments provided")
         return
     activity, category, comment = parse_activity_argument(unknown_args[0])
     if activity == None:
-        logger.error("Wrong activity format")
+        logging.error("Wrong activity format")
         return
     vjkcli.activity_add(args.start, args.stop,
                         activity, category, comment)
 
 def cmd_handler_activity_add(vjkcli, args, unknown_args):
     if len(unknown_args) < 1 or args.start == None:
-        logger.error("Not enough arguments provided")
+        logging.error("Not enough arguments provided")
         return
     activity, category, comment = parse_activity_argument(unknown_args[0])
     if activity == None:
-        logger.error("Wrong activity format")
+        logging.error("Wrong activity format")
         return
     vjkcli.activity_add(args.start, args.stop,
                         activity, category, comment)
 
 def cmd_handler_category_add(vjkcli, args, unknown_args):
     if len(unknown_args) < 1:
-        logger.error("Not enough arguments provided")
+        logging.error("Not enough arguments provided")
         return
     vjkcli.category_add(unknown_args[0])
 
@@ -367,7 +367,7 @@ def cmd_handler_activity_edit(vjkcli, args, unknown_args):
 
 def cmd_handler_category_edit(vjkcli, args, unknown_args):
     if len(unknown_args) < 1:
-        logger.error("Not enough arguments provided")
+        logging.error("Not enough arguments provided")
         return
     vjkcli.category_add(args.id, unknown_args[0])
 
