@@ -44,6 +44,8 @@ for cmd in ['list']:
     spp = sp.add_parser(cmd, help = 'List activities/categories')
     spp.add_argument('--category', dest = 'category',
                      help = 'Category mode', action = 'store_true')
+    spp.add_argument('--summary', dest = 'summary',
+                     help = 'Show summary time spent', action = 'store_true')
     spp.add_argument('--long', dest = 'long',
                      help = 'Long output for time records.', action = 'store_true')
     spp.add_argument('--start', dest = 'start',
@@ -241,6 +243,8 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         catlen = max(len(dict_value(x, 'category')), catlen)
         namelen = max(len(dict_value(x, 'name')), namelen)
 
+    summary = int(0)
+
     fmt = "{1:<{0:}}{3:<{2:}}{5:<{4:}}{7:<{6:}}{9:<{8:}}{11:<{10:}}{13:<{12:}}"
     print(fmt.format(6, 'ID',
                      (namelen + 2), 'Name',
@@ -268,7 +272,9 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
             ts_start_str = strftime_short(ts_start)
             ts_stop_str = strftime_short(ts_stop_virt)
 
-        h, m, s = seconds_to_hms(ts_stop - ts_start)
+        spent = ts_stop - ts_start
+        summary += spent
+        h, m, s = seconds_to_hms(spent)
         hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
 
         print(fmt.format(6, x['id'],
@@ -278,6 +284,10 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
                          ts_len, ts_stop_str,
                          14, hms,
                          16, dict_value(x,'comment')))
+    if args.summary:
+        h, m, s = seconds_to_hms(summary)
+        hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
+        print("---\nSummary: %s" % (hms))
 
 def cmd_handler_category_list(vjkcli, args, unknown_args):
     reply = vjkcli.category_list()
