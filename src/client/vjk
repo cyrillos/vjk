@@ -308,7 +308,7 @@ def cmd_handler_server_exit(vjkcli, args, unknown_args):
 
 def parse_activity_argument(arg):
     # activity@category|comment
-    m = re.match("(\w+)?\@?(\w+)?\,?(.+)?", arg)
+    m = re.match("([^\@]+)\@([^\,]+)(\,.+)?", arg)
     if m == None or m.group(1) == None or m.group(2) == None:
         return (None, None, None)
     return (m.group(1), m.group(2), m.group(3))
