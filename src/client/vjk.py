@@ -100,7 +100,7 @@ class Vjk:
         if time_start:
             data['time-start'] = time_start
         if time_stop:
-            data['time-sttop'] = time_stop
+            data['time-stop'] = time_stop
         obj = { 'cmd': 'activity-list', 'data': data }
         return self.send(obj)
 
