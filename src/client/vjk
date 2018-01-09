@@ -311,7 +311,10 @@ def parse_activity_argument(arg):
     m = re.match("([^\@]+)\@([^\,]+)(\,.+)?", arg)
     if m == None or m.group(1) == None or m.group(2) == None:
         return (None, None, None)
-    return (m.group(1), m.group(2), m.group(3))
+    comment = m.group(3)
+    if comment != None:
+        comment = m.group(3)[1:]
+    return (m.group(1), m.group(2), comment)
 
 def cmd_handler_activity_start(vjkcli, args, unknown_args):
     if len(unknown_args) < 1:
