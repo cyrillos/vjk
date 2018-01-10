@@ -56,6 +56,7 @@ class Vjk:
                 'activity': activity,
                 'category': category,
                 'time-start': time_start,
+                'tz': 10800,
         }
         if time_stop:
             data['time-stop'] = time_stop
