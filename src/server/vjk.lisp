@@ -256,20 +256,20 @@
 
 (defun activity-insert (db data)
   (pr-debug "activity-insert: ~a" data)
-  (multiple-value-bind (ts-start ts-stop activity category comment)
+  (multiple-value-bind (ts-start ts-stop tz activity category comment)
     (values-list (mapcar #'(lambda(v) (json-get v data))
-                         '("time-start" "time-stop" "activity" "category" "comment")))
-    (when (not (and ts-start activity category))
+                         '("time-start" "time-stop" "tz" "activity" "category" "comment")))
+    (when (not (and ts-start tz activity category))
       (return-from activity-insert
-                   (ret-err "Missing timestamps, name or category")))
+                   (ret-err "Missing timestamps, timezone, name or category")))
     (let ((catid (db-lookup-signle db "category" "name" "=" category)))
       (when (not catid)
         (setf catid (db-insert db "category" '("name") (list category))))
       (when (not catid)
         (return-from activity-insert
                      (ret-err "Unable to insert category")))
-      (let ((cols (list "catid" "name" "comment" "start" "stop"))
-            (vals (list (car catid) activity comment ts-start ts-stop)))
+      (let ((cols (list "catid" "name" "comment" "start" "stop" "tz"))
+            (vals (list (car catid) activity comment ts-start ts-stop tz)))
         (let ((inserted (db-insert db "activity"
                                    (loop for x in cols for y in vals when y collect x)
                                    (loop for y in vals when y collect y))))
@@ -312,7 +312,7 @@
         (if rec (nth 1 rec) ""))))
 
 (defun gen-activity-recs (args)
-  (let ((enames (list "id" "category" "name" "comment" "start" "stop")))
+  (let ((enames (list "id" "category" "name" "comment" "start" "stop" "tz")))
     (yason:with-array ()
       (loop for x in (second args)
           collect (yason:with-object ()
@@ -344,9 +344,9 @@
 
 (defun activity-update (db data)
   (pr-debug "activity-update ~a" data)
-  (multiple-value-bind (id ts-start ts-stop activity category comment)
+  (multiple-value-bind (id ts-start ts-stop tz activity category comment)
     (values-list (mapcar #'(lambda(v) (json-get v data))
-                         '("id" "time-start" "time-stop"
+                         '("id" "time-start" "time-stop" "tz"
                            "activity" "category" "comment")))
     (when (not (and id ts-start activity category))
       (return-from activity-update
@@ -359,10 +359,10 @@
                          (ret-err "Unable to write category"))))
         (let ((updated
                 (db-update db "activity"
-                           '("catid" "name" "comment" "start" "stop")
+                           '("catid" "name" "comment" "start" "stop" "tz")
                            '("=" "=" "=" "=" "=")
                            (list (car catid) activity comment
-                                 ts-start ts-stop)
+                                 ts-start ts-stop tz)
                            id)))
           (when (not updated)
             (return-from activity-update
