@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+import calendar
 import logging
 import pprint
 import json
@@ -185,15 +186,15 @@ def unixfstr_short(time_string):
 def unix_timestamp():
     return int(time.time())
 
-def today_starts_unix_time():
+def today_starts_unix_timestamp():
     t = time.gmtime()
-    return int(time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
-                            t.tm_wday, t.tm_yday, t.tm_isdst)))
+    return int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
+                                t.tm_wday, t.tm_yday, t.tm_isdst)))
 
-def today_ends_unix_time():
+def today_ends_unix_timestamp():
     t = time.gmtime()
-    return int(time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 23, 59, 59,
-                            t.tm_wday, t.tm_yday, t.tm_isdst)))
+    return int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday, 23, 59, 59,
+                                t.tm_wday, t.tm_yday, t.tm_isdst)))
 
 def tz_offset():
     now = unix_timestamp()
@@ -232,7 +233,7 @@ def cmd_handler_invalid(vjkcli, args, unknown_args):
 def cmd_handler_activity_list(vjkcli, args, unknown_args):
     ts_start = relative_to_ts(args.start)
     if ts_start == None:
-        ts_start = today_starts_unix_time()
+        ts_start = today_starts_unix_timestamp()
     ts_stop = relative_to_ts(args.stop)
 
     reply = vjkcli.activity_list(ts_start, ts_stop)
