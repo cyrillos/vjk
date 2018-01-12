@@ -157,31 +157,31 @@ def seconds_to_hms(seconds):
     seconds -= m * 60
     return (h, m, seconds)
 
-def strftime_long(timestamp):
+def unix_strftime_long(timestamp):
     if timestamp == None:
         return ''
-    return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
-def strftime_short(timestamp):
+def unix_strftime_short(timestamp):
     if timestamp == None:
         return ''
-    return datetime.fromtimestamp(timestamp).strftime('%H:%M:%S')
+    return datetime.utcfromtimestamp(timestamp).strftime('%H:%M:%S')
 
-def unixfstr_long(time_string):
+def unix_strptime_long(time_string):
     if time_string == None:
         return None
     d = datetime.strptime(time_string, '%Y-%m-%d %H:%M:%S')
-    return int(time.mktime(d.timetuple()))
+    return int(calendar.timegm(d.timetuple()))
 
-def unixfstr_short(time_string):
+def unix_strptime_short(time_string):
     if time_string == None:
         return None
     d = datetime.strptime(time_string, '%H:%M:%S')
     t1 = d.timetuple()
     t2 = time.gmtime()
-    return int(time.mktime((t2.tm_year, t2.tm_mon, t2.tm_mday,
-                            t1.tm_hour, t1.tm_min, t1.tm_sec,
-                            t2.tm_wday, t2.tm_yday, t2.tm_isdst)))
+    return int(calendar.timegm((t2.tm_year, t2.tm_mon, t2.tm_mday,
+                                t1.tm_hour, t1.tm_min, t1.tm_sec,
+                                t2.tm_wday, t2.tm_yday, t2.tm_isdst)))
 
 def unix_timestamp():
     return int(time.time())
@@ -228,12 +228,12 @@ def cmd_handler_invalid(vjkcli, args, unknown_args):
 
 def cmd_handler_activity_list(vjkcli, args, unknown_args):
     timestamp = unix_timestamp()
-    ts_start = timestamp_shift(timestamp, args.start)
-    if ts_start == None:
-        ts_start = today_starts_unix_timestamp()
-    ts_stop = timestamp_shift(timestamp, args.stop)
+    timestamp_from = timestamp_shift(timestamp, args.start)
+    if timestamp_from == None:
+        timestamp_from = today_starts_unix_timestamp()
+    timestamp_to = timestamp_shift(timestamp, args.stop)
 
-    reply = vjkcli.activity_list(ts_start, ts_stop)
+    reply = vjkcli.activity_list(timestamp_from, timestamp_to)
     if not reply_ok(reply):
         reply_err(reply)
     if not 'data' in reply:
@@ -263,22 +263,26 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
     for x in reply['data']:
         if not 'start' in x or x['start'] == None:
             continue
-        ts_start = int(x['start'])
+        if not 'tz' in x or x['tz'] == None:
+            continue
+
+        tz = int(x['tz'])
+        timestamp_start = int(x['start']) + tz
+
         if not 'stop' in x or x['stop'] == None:
-            ts_stop = unix_timestamp()
-            ts_stop_virt = None
+            timestamp_stop = None
+            spent = unix_timestamp() - (timestamp_start - tz)
         else:
-            ts_stop = int(x['stop'])
-            ts_stop_virt = ts_stop
+            timestamp_stop = int(x['stop']) + tz
+            spent = timestamp_stop - timestamp_start
 
         if args.long:
-            ts_start_str = strftime_long(ts_start)
-            ts_stop_str = strftime_long(ts_stop_virt)
+            timestamp_start_str = unix_strftime_long(timestamp_start)
+            timestamp_stop_str = unix_strftime_long(timestamp_stop)
         else:
-            ts_start_str = strftime_short(ts_start)
-            ts_stop_str = strftime_short(ts_stop_virt)
+            timestamp_start_str = unix_strftime_short(timestamp_start)
+            timestamp_stop_str = unix_strftime_short(timestamp_stop)
 
-        spent = ts_stop - ts_start
         summary += spent
         h, m, s = seconds_to_hms(spent)
         hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
@@ -286,8 +290,8 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         print(fmt.format(6, x['id'],
                          (namelen + 2), dict_value(x, 'name'),
                          catlen + 2, dict_value(x, 'category'),
-                         ts_len, ts_start_str,
-                         ts_len, ts_stop_str,
+                         ts_len, timestamp_start_str,
+                         ts_len, timestamp_stop_str,
                          14, hms,
                          16, dict_value(x,'comment')))
     if args.summary:
@@ -340,7 +344,7 @@ def cmd_handler_activity_start(vjkcli, args, unknown_args):
     if activity == None:
         logging.error("Wrong activity format")
         return
-    vjkcli.activity_add(unix_timestamp(), None,
+    vjkcli.activity_add(unix_timestamp(), None, tz_offset(),
                         activity, category, comment)
 
 def cmd_handler_activity_stop(vjkcli, args, unknown_args):
@@ -355,18 +359,9 @@ def cmd_handler_activity_add(vjkcli, args, unknown_args):
     if activity == None:
         logging.error("Wrong activity format")
         return
-    vjkcli.activity_add(args.start, args.stop,
-                        activity, category, comment)
-
-def cmd_handler_activity_add(vjkcli, args, unknown_args):
-    if len(unknown_args) < 1 or args.start == None:
-        logging.error("Not enough arguments provided")
-        return
-    activity, category, comment = parse_activity_argument(unknown_args[0])
-    if activity == None:
-        logging.error("Wrong activity format")
-        return
-    vjkcli.activity_add(args.start, args.stop,
+    vjkcli.activity_add(unix_strptime_long(args.start),
+                        unix_strptime_long(args.stop),
+                        tz_offset(),
                         activity, category, comment)
 
 def cmd_handler_category_add(vjkcli, args, unknown_args):
@@ -382,8 +377,8 @@ def cmd_handler_activity_edit(vjkcli, args, unknown_args):
         activity, category, comment = (None, None, None)
     if args.tz:
         args.tz = int(args.tz)
-    vjkcli.activity_update(args.id, unixfstr_long(args.start),
-                           unixfstr_long(args.stop), args.tz,
+    vjkcli.activity_update(args.id, unix_strptime_long(args.start),
+                           unix_strptime_long(args.stop), args.tz,
                            activity, category, comment)
 
 def cmd_handler_category_edit(vjkcli, args, unknown_args):
@@ -402,7 +397,7 @@ cmd_handler = {
     'edit':     [True, cmd_handler_activity_edit, cmd_handler_category_edit],
 }
 
-vjkcli = vjk.Vjk(logging, conf, tz_offset())
+vjkcli = vjk.Vjk(logging, conf)
 if vjkcli.connected() == False:
     logging.error("Not connected")
     sys.exit(1)

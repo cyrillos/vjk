@@ -5,10 +5,9 @@ import json
 import sys
 
 class Vjk:
-    def __init__(self, log, conf, tz):
+    def __init__(self, log, conf):
         self.log = log
         self.conf = conf
-        self.tz = tz
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.addr, self.port = conf["address"].split(":")
         try:
@@ -46,10 +45,10 @@ class Vjk:
         obj = { 'cmd': 'exit' }
         return self.send(obj)
 
-    def activity_add(self, time_start, time_stop,
+    def activity_add(self, time_start, time_stop, tz,
                      activity, category, comment):
-        self.log.debug("Vjk: activity_add: %s %s %s %s %s" %
-                       (repr(time_start), repr(time_stop),
+        self.log.debug("Vjk: activity_add: %s %s %s %s %s %s" %
+                       (repr(time_start), repr(time_stop), repr(tz),
                         repr(activity), repr(category), repr(comment)))
         if time_start == None or activity == None or category == None:
             return None
@@ -57,7 +56,7 @@ class Vjk:
                 'activity': activity,
                 'category': category,
                 'time-start': time_start,
-                'tz': self.tz,
+                'tz': tz,
         }
         if time_stop:
             data['time-stop'] = time_stop
