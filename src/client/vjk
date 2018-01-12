@@ -63,6 +63,8 @@ for cmd in ['add']:
     spp.add_argument('--stop', dest = 'stop',
                      help = 'Date and time activity stopped at. \
                      Format [YYYY-MM-DD] hh:mm:ss.')
+    spp.add_argument('--tz', dest = 'tz',
+                     help = 'Timezone offset in seconds.')
 
 for cmd in ['edit']:
     spp = sp.add_parser(cmd, help = 'Edit activity/category')
@@ -180,7 +182,7 @@ def unixfstr_short(time_string):
                             t1.tm_hour, t1.tm_min, t1.tm_sec,
                             t2.tm_wday, t2.tm_yday, t2.tm_isdst)))
 
-def current_unix_time():
+def unix_timestamp():
     return int(time.time())
 
 def today_starts_unix_time():
@@ -194,7 +196,7 @@ def today_ends_unix_time():
                             t.tm_wday, t.tm_yday, t.tm_isdst)))
 
 def tz_offset():
-    now = current_unix_time()
+    now = unix_timestamp()
     utc = time.gmtime(now)
     loc = time.localtime(now)
     return int(time.mktime(loc) - time.mktime(utc))
@@ -216,7 +218,7 @@ def relative_to_ts(relative):
                 step = 60
             else:
                 step = 1
-            current = current_unix_time()
+            current = unix_timestamp()
             if m.group(1) == '-':
                 relative = current - val * step
             else:
@@ -265,7 +267,7 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
             continue
         ts_start = int(x['start'])
         if not 'stop' in x or x['stop'] == None:
-            ts_stop = current_unix_time()
+            ts_stop = unix_timestamp()
             ts_stop_virt = None
         else:
             ts_stop = int(x['stop'])
@@ -340,11 +342,11 @@ def cmd_handler_activity_start(vjkcli, args, unknown_args):
     if activity == None:
         logging.error("Wrong activity format")
         return
-    vjkcli.activity_add(current_unix_time(), None,
+    vjkcli.activity_add(unix_timestamp(), None,
                         activity, category, comment)
 
 def cmd_handler_activity_stop(vjkcli, args, unknown_args):
-    vjkcli.activity_stop(current_unix_time())
+    vjkcli.activity_stop(unix_timestamp())
     return
 
 def cmd_handler_activity_add(vjkcli, args, unknown_args):
@@ -380,8 +382,10 @@ def cmd_handler_activity_edit(vjkcli, args, unknown_args):
         activity, category, comment = parse_activity_argument(unknown_args[0])
     else:
         activity, category, comment = (None, None, None)
+    if args.tz:
+        args.tz = int(args.tz)
     vjkcli.activity_update(args.id, unixfstr_long(args.start),
-                           unixfstr_long(args.stop),
+                           unixfstr_long(args.stop), args.tz,
                            activity, category, comment)
 
 def cmd_handler_category_edit(vjkcli, args, unknown_args):

@@ -74,10 +74,10 @@ class Vjk:
         obj = { 'cmd': 'activity-stop', 'data': data }
         return self.send(obj)
 
-    def activity_update(self, eid, time_start, time_stop,
+    def activity_update(self, eid, time_start, time_stop, tz,
                         activity, category, comment):
-        self.log.debug("Vjk: activity_update: %s %s %s %s %s %s" %
-                       (repr(eid), repr(time_start), repr(time_stop),
+        self.log.debug("Vjk: activity_update: %s %s %s %s %s %s %s" %
+                       (repr(eid), repr(time_start), repr(time_stop), repr(tz),
                         repr(activity), repr(category), repr(comment)))
         if eid == None:
             return None
@@ -90,6 +90,8 @@ class Vjk:
             data['time-start'] = time_start
         if time_stop:
             data['time-stop'] = time_stop
+        if tz:
+            data['tz'] = tz
         if comment:
             data['comment'] = comment
         obj = { 'cmd': 'activity-update', 'data': data }
