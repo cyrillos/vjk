@@ -197,12 +197,9 @@ def today_ends_unix_timestamp():
                                 t.tm_wday, t.tm_yday, t.tm_isdst)))
 
 def tz_offset():
-    now = unix_timestamp()
-    utc = time.gmtime(now)
-    loc = time.localtime(now)
-    return int(time.mktime(loc) - time.mktime(utc))
+    return -int(time.timezone)
 
-def relative_to_ts(relative):
+def timestamp_shift(timestamp, relative):
     if relative != None:
         m = re.search('([\+\-]?)([0-9]+)([wdhm]?)', relative)
         if m:
@@ -219,11 +216,10 @@ def relative_to_ts(relative):
                 step = 60
             else:
                 step = 1
-            current = unix_timestamp()
             if m.group(1) == '-':
-                relative = current - val * step
+                relative = timestamp - val * step
             else:
-                relative = current + val * step
+                relative = timestamp + val * step
     return relative
 
 def cmd_handler_invalid(vjkcli, args, unknown_args):
@@ -231,10 +227,11 @@ def cmd_handler_invalid(vjkcli, args, unknown_args):
     sys.exit(1)
 
 def cmd_handler_activity_list(vjkcli, args, unknown_args):
-    ts_start = relative_to_ts(args.start)
+    timestamp = unix_timestamp()
+    ts_start = timestamp_shift(timestamp, args.start)
     if ts_start == None:
         ts_start = today_starts_unix_timestamp()
-    ts_stop = relative_to_ts(args.stop)
+    ts_stop = timestamp_shift(timestamp, args.stop)
 
     reply = vjkcli.activity_list(ts_start, ts_stop)
     if not reply_ok(reply):
