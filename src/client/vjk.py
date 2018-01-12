@@ -5,9 +5,10 @@ import json
 import sys
 
 class Vjk:
-    def __init__(self, log, conf):
+    def __init__(self, log, conf, tz):
         self.log = log
         self.conf = conf
+        self.tz = tz
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.addr, self.port = conf["address"].split(":")
         try:
@@ -56,7 +57,7 @@ class Vjk:
                 'activity': activity,
                 'category': category,
                 'time-start': time_start,
-                'tz': 10800,
+                'tz': self.tz,
         }
         if time_stop:
             data['time-stop'] = time_stop

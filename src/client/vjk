@@ -193,6 +193,12 @@ def today_ends_unix_time():
     return int(time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 23, 59, 59,
                             t.tm_wday, t.tm_yday, t.tm_isdst)))
 
+def tz_offset():
+    now = current_unix_time()
+    utc = time.gmtime(now)
+    loc = time.localtime(now)
+    return int(time.mktime(loc) - time.mktime(utc))
+
 def relative_to_ts(relative):
     if relative != None:
         m = re.search('([\+\-]?)([0-9]+)([wdhm]?)', relative)
@@ -394,7 +400,7 @@ cmd_handler = {
     'edit':     [True, cmd_handler_activity_edit, cmd_handler_category_edit],
 }
 
-vjkcli = vjk.Vjk(logging, conf)
+vjkcli = vjk.Vjk(logging, conf, tz_offset())
 if vjkcli.connected() == False:
     logging.error("Not connected")
     sys.exit(1)
