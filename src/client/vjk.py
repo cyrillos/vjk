@@ -62,11 +62,11 @@ class Vjk:
                 'tzstart': tz_start,
         }
         if ts_stop:
-            if not tz_stop
+            if not tz_stop:
                 return None
             data['tsstop'] = ts_stop
         if tz_stop:
-            if not ts_stop
+            if not ts_stop:
                 return None
             data['tzstop'] = tz_stop
         if comment:
