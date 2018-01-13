@@ -293,13 +293,13 @@
                    (ret-err "No running activity found")))
     (let* ((rec (db-lookup-signle db "activity" "id" "=" actid))
            (id (car rec))
-           (stopped (nth 5 rec)))
+           (stopped (nth 7 rec)))
       (when stopped
         (return-from activity-stop
                      (ret-err "Activity already stopped")))
       (let ((updated (db-update db "activity"
                                 '("tsstop" "tzstop")
-                                '("=")
+                                '("=" "=")
                                 (list ts-stop tz-stop) id)))
         (when (not updated)
            (return-from activity-stop
@@ -367,7 +367,7 @@
         (let ((updated
                 (db-update db "activity"
                            '("catid" "name" "comment" "tsstart" "tzstart" "tsstop" "tzstop")
-                           '("=" "=" "=" "=" "=")
+                           '("=" "=" "=" "=" "=" "=" "=")
                            (list (car catid) activity comment
                                  ts-start tz-start ts-stop tz-stop)
                            id)))
