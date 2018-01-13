@@ -3,9 +3,10 @@
 		{
 			"cmd": "activity-add",
 			"data": {
-				"time-start": "1509895699",
-				"time-stop":  "1509895799",
-				"tz": "10800",
+				"ts-start": 1509895699,
+				"tz-start": 10800,
+				"ts-stop":  1509895799,
+				"tz-stop": 10800,
 				"activity": "psbm",
 				"category": "vz",
 				"comment": "sas32"
@@ -14,8 +15,8 @@
 		{
 			"cmd": "activity-start",
 			"data": {
-				"time-start": "1509895699",
-				"tz": "10800",
+				"ts-start": 1509895699,
+				"tz-start": 10800,
 				"activity": "psbm",
 				"category": "vz",
 				"comment": "sas32"
@@ -24,7 +25,8 @@
 		{
 			"cmd": "activity-stop",
 			"data": {
-				"time-stop": "1509895799"
+				"ts-stop": 1509895799,
+				"tz-stop": 10800
 			}
 		},
 		{
@@ -37,9 +39,10 @@
 			"cmd": "activity-update",
 			"data": {
 				"id": "1",
-				"time-start": "1509895699",
-				"time-stop":  "1509895799",
-				"tz": "10800",
+				"ts-start": 1509895699,
+				"tz-start": 10800,
+				"ts-stop":  1509895799,
+				"tz-stop": 10800,
 				"activity": "psbm",
 				"category": "vz",
 				"comment": "sas32"
@@ -49,9 +52,10 @@
 			"cmd": "activity-list",
 			"data": {
 				"id": "1",
-				"time-start": "1509895699",
-				"time-stop":  "1509895799",
-				"tz": "10800",
+				"ts-start": 1509895699,
+				"tz-start": 10800,
+				"ts-stop":  1509895799,
+				"tz-stop": 10800,
 				"activity": "psbm",
 				"category": "vz",
 				"comment": "sas32"

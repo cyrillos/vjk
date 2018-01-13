@@ -172,16 +172,18 @@
 ;; Database structure and helpers
 ;; tables:
 ;;      activity
-;;              @id
-;;              @catid ---------+
-;;              @name           |
-;;              @comment        |
-;;              @start          |
-;;              @stop           |
+;;              @id                     entry id
+;;              @catid ---------+       category id
+;;              @name           |       activity name
+;;              @comment        |       comment
+;;              @tsstart        |       unix timestamp on start (utc time)
+;;              @tzstart        |       timezone offset on start
+;;              @tsstop         |       unix timestamp on stop
+;;              @tzstop         |       timezone offset on stop
 ;;      category                |
 ;;              @id     <-------+
-;;              @name
-;;              @comment
+;;              @name                   category name
+;;              @comment                comment
 
 (defun db-fmt-conds (cols conds vals &key allow-nils)
   (loop for x in cols for y in conds for z in vals
@@ -256,10 +258,10 @@
 
 (defun activity-insert (db data)
   (pr-debug "activity-insert: ~a" data)
-  (multiple-value-bind (ts-start ts-stop tz activity category comment)
+  (multiple-value-bind (ts-start tz-start ts-stop tz-stop activity category comment)
     (values-list (mapcar #'(lambda(v) (json-get v data))
-                         '("time-start" "time-stop" "tz" "activity" "category" "comment")))
-    (when (not (and ts-start tz activity category))
+                         '("tsstart" "tzstart" "tsstop" "tzstop" "activity" "category" "comment")))
+    (when (not (and ts-start tz-start activity category))
       (return-from activity-insert
                    (ret-err "Missing timestamps, timezone, name or category")))
     (let ((catid (db-lookup-signle db "category" "name" "=" category)))
@@ -268,8 +270,8 @@
       (when (not catid)
         (return-from activity-insert
                      (ret-err "Unable to insert category")))
-      (let ((cols (list "catid" "name" "comment" "start" "stop" "tz"))
-            (vals (list (car catid) activity comment ts-start ts-stop tz)))
+      (let ((cols (list "catid" "name" "comment" "tsstart" "tzstart" "tsstop" "tzstop"))
+            (vals (list (car catid) activity comment ts-start tz-start ts-stop tz-stop)))
         (let ((inserted (db-insert db "activity"
                                    (loop for x in cols for y in vals when y collect x)
                                    (loop for y in vals when y collect y))))
@@ -280,11 +282,12 @@
 
 (defun activity-stop (db data)
   (pr-debug "activity-stop: ~a" data)
-  (let ((ts (json-get "time-stop" data))
+  (let ((ts-stop (json-get "tsstop" data))
+        (tz-stop (json-get "tzstop" data))
         (actid (db-last-id db "activity")))
-    (when (not ts)
+    (when (not (and ts-stop tz-stop))
       (return-from activity-stop
-                   (ret-err "Missing timestamp")))
+                   (ret-err "Missing timestamp or timezone")))
     (when (not actid)
       (return-from activity-stop
                    (ret-err "No running activity found")))
@@ -294,7 +297,10 @@
       (when stopped
         (return-from activity-stop
                      (ret-err "Activity already stopped")))
-      (let ((updated (db-update db "activity" '("stop") '("=") (list ts) id)))
+      (let ((updated (db-update db "activity"
+                                '("tsstop" "tzstop")
+                                '("=")
+                                (list ts-stop tz-stop) id)))
         (when (not updated)
            (return-from activity-stop
                        (ret-err "Failed to stop activity")))
@@ -312,7 +318,8 @@
         (if rec (nth 1 rec) ""))))
 
 (defun gen-activity-recs (args)
-  (let ((enames (list "id" "category" "name" "comment" "start" "stop" "tz")))
+  (let ((enames (list "id" "category" "name" "comment"
+                      "tsstart" "tzstart" "tsstop" "tzstop")))
     (yason:with-array ()
       (loop for x in (second args)
           collect (yason:with-object ()
@@ -326,14 +333,14 @@
 
 (defun activity-list (db data)
   (pr-debug "activity-list: ~a" data)
-  (let ((ts-start (json-get "time-start" data))
-        (ts-stop (json-get "time-stop" data)))
+  (let ((ts-start (json-get "tsstart" data))
+        (ts-stop (json-get "tsstop" data)))
     (when (not ts-start)
       (return-from activity-list
                    (ret-err "Missing time start/stop parameters")))
     (let ((recs
             (db-lookup db "activity"
-                       '("start" "stop")
+                       '("tsstart" "tsstop")
                        '(">=" "<=")
                        (list ts-start ts-stop) nil)))
       (when (not recs)
@@ -344,11 +351,11 @@
 
 (defun activity-update (db data)
   (pr-debug "activity-update ~a" data)
-  (multiple-value-bind (id ts-start ts-stop tz activity category comment)
+  (multiple-value-bind (id ts-start tz-start ts-stop tz-stop activity category comment)
     (values-list (mapcar #'(lambda(v) (json-get v data))
-                         '("id" "time-start" "time-stop" "tz"
+                         '("id" "tsstart" "tzstart" "tsstop" "tzstop"
                            "activity" "category" "comment")))
-    (when (not (and id ts-start activity category))
+    (when (not (and id ts-start tz-start activity category))
       (return-from activity-update
                    (ret-err "Missing activity id, start, activity or category")))
     (let ((catid (db-lookup-signle db "category" "name" "=" category)))
@@ -359,10 +366,10 @@
                          (ret-err "Unable to write category"))))
         (let ((updated
                 (db-update db "activity"
-                           '("catid" "name" "comment" "start" "stop" "tz")
+                           '("catid" "name" "comment" "tsstart" "tzstart" "tsstop" "tzstop")
                            '("=" "=" "=" "=" "=")
                            (list (car catid) activity comment
-                                 ts-start ts-stop tz)
+                                 ts-start tz-start ts-stop tz-stop)
                            id)))
           (when (not updated)
             (return-from activity-update

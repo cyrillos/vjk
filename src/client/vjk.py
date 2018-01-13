@@ -45,38 +45,46 @@ class Vjk:
         obj = { 'cmd': 'exit' }
         return self.send(obj)
 
-    def activity_add(self, time_start, time_stop, tz,
+    def activity_add(self, ts_start, tz_start,
+                     ts_stop, tz_stop,
                      activity, category, comment):
-        self.log.debug("Vjk: activity_add: %s %s %s %s %s %s" %
-                       (repr(time_start), repr(time_stop), repr(tz),
+        self.log.debug("Vjk: activity_add: %s %s %s %s %s %s %s" %
+                       (repr(ts_start), repr(tz_start),
+                        repr(ts_stop), repr(tz_stop),
                         repr(activity), repr(category), repr(comment)))
-        if time_start == None or activity == None or category == None:
+        if ts_start == None or tz_start == None or \
+                activity == None or category == None:
             return None
         data = {
                 'activity': activity,
                 'category': category,
-                'time-start': time_start,
-                'tz': tz,
+                'tsstart': ts_start,
+                'tzstart': tz_start,
         }
-        if time_stop:
-            data['time-stop'] = time_stop
+        if ts_stop:
+            data['tsstop'] = ts_stop
+        if tz_stop:
+            data['tzstop'] = tz_stop
         if comment:
             data['comment'] = comment
         obj = { 'cmd': 'activity-start', 'data': data }
         return self.send(obj)
 
-    def activity_stop(self, time_stop):
-        self.log.debug("Vjk: activity_stop: %s" % (repr(time_stop)))
-        if time_stop == None:
+    def activity_stop(self, ts_stop, tz_stop):
+        self.log.debug("Vjk: activity_stop: %s %s" %
+                       (repr(ts_stop), repr(tz_stop)))
+        if ts_stop == None:
             return None
-        data = { 'time-stop': time_stop }
+        data = { 'tsstop': ts_stop, 'tzstop': tz_stop }
         obj = { 'cmd': 'activity-stop', 'data': data }
         return self.send(obj)
 
-    def activity_update(self, eid, time_start, time_stop, tz,
+    def activity_update(self, eid, ts_start, tz_start,
+                        ts_stop, tz_stop,
                         activity, category, comment):
-        self.log.debug("Vjk: activity_update: %s %s %s %s %s %s %s" %
-                       (repr(eid), repr(time_start), repr(time_stop), repr(tz),
+        self.log.debug("Vjk: activity_update: %s %s %s %s %s %s %s %s" %
+                       (repr(eid), repr(ts_start), repr(tz_start),
+                        repr(ts_stop), repr(tz_stop),
                         repr(activity), repr(category), repr(comment)))
         if eid == None:
             return None
@@ -85,25 +93,27 @@ class Vjk:
             data['activity'] = activity
         if category:
             data['category'] = category
-        if time_start:
-            data['time-start'] = time_start
-        if time_stop:
-            data['time-stop'] = time_stop
-        if tz:
-            data['tz'] = tz
+        if ts_start:
+            data['tsstart'] = ts_start
+        if tz_start:
+            data['tzstart'] = tz_start
+        if ts_stop:
+            data['tsstop'] = ts_stop
+        if tz_stop:
+            data['tzstop'] = tz_stop
         if comment:
             data['comment'] = comment
         obj = { 'cmd': 'activity-update', 'data': data }
         return self.send(obj)
 
-    def activity_list(self, time_start, time_stop):
+    def activity_list(self, ts_start, ts_stop):
         self.log.debug("Vjk: activity_list: %s %s" %
-                       (repr(time_start), repr(time_stop)))
+                       (repr(ts_start), repr(ts_stop)))
         data = { }
-        if time_start:
-            data['time-start'] = time_start
-        if time_stop:
-            data['time-stop'] = time_stop
+        if ts_start:
+            data['tsstart'] = ts_start
+        if ts_stop:
+            data['tsstop'] = ts_stop
         obj = { 'cmd': 'activity-list', 'data': data }
         return self.send(obj)
 
