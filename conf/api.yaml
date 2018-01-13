@@ -1,0 +1,400 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: vjk api
+host: 'localhost:7676'
+basePath: /v1/api
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /activity/add:
+    post:
+      summary: Add new activity
+      parameters:
+        - name: data
+          in: body
+          description: Activity options
+          required: true
+          schema:
+            $ref: '#/definitions/ActivityCmdAdd'
+      responses:
+        200:
+          description: Activity has been added
+          schema:
+            $ref: '#/definitions/ReplyOK'
+        400:
+          description: Bad request
+          schema:
+            $ref: '#/definitions/ReplyErr'
+  /activity/start:
+    post:
+      summary: Start new activity
+      parameters:
+        - name: data
+          in: body
+          description: Activity options
+          required: true
+          schema:
+            $ref: '#/definitions/ActivityCmdStart'
+      responses:
+        200:
+          description: Activity has been started
+          schema:
+            $ref: '#/definitions/ReplyOK'
+        400:
+          description: Bad request
+          schema:
+            $ref: '#/definitions/ReplyErr'
+  /activity/stop:
+    post:
+      summary: Stop last activity
+      parameters:
+        - name: data
+          in: body
+          description: Activity options
+          required: true
+          schema:
+            $ref: '#/definitions/ActivityCmdStop'
+      responses:
+        200:
+          description: Activity has been stopped
+          schema:
+            $ref: '#/definitions/ReplyOK'
+        400:
+          description: Bad request
+          schema:
+            $ref: '#/definitions/ReplyErr'
+  /activity/delete:
+    post:
+      summary: Delete activity
+      parameters:
+        - name: data
+          in: body
+          description: Activity options
+          required: true
+          schema:
+            $ref: '#/definitions/ActivityCmdDelete'
+      responses:
+        200:
+          description: Activity has been deleted
+          schema:
+            $ref: '#/definitions/ReplyOK'
+        400:
+          description: Bad request
+          schema:
+            $ref: '#/definitions/ReplyErr'
+  /activity/update:
+    post:
+      summary: Update activity
+      parameters:
+        - name: data
+          in: body
+          description: Activity options
+          required: true
+          schema:
+            $ref: '#/definitions/ActivityCmdUpdate'
+      responses:
+        200:
+          description: Activity has been updated
+          schema:
+            $ref: '#/definitions/ReplyOK'
+        400:
+          description: Bad request
+          schema:
+            $ref: '#/definitions/ReplyErr'
+  /activity/list:
+    post:
+      summary: List activities
+      parameters:
+        - name: data
+          in: body
+          description: Activity options
+          required: true
+          schema:
+            $ref: '#/definitions/ActivityCmdList'
+      responses:
+        200:
+          description: Activity entries
+          schema:
+            $ref: '#/definitions/ActivityCmdListReply'
+        400:
+          description: Bad request
+          schema:
+            $ref: '#/definitions/ReplyErr'
+definitions:
+  ReplyOK:
+    required:
+      - status
+    properties:
+      status:
+        type: integer
+        description: Result code
+        example: 200
+  ReplyErr:
+    required:
+      - status
+    properties:
+      status:
+        type: integer
+        description: Error code
+        example: 400
+      data:
+        type: string
+        description: Error message
+        example: "Error description"
+  ActivityCmdAdd:
+    required:
+      - cmd
+      - data
+    properties:
+      cmd:
+        type: string
+        example: 'activity-add'
+      data:
+        $ref: '#/definitions/ActivityCmdAddData'
+  ActivityCmdAddData:
+    required:
+      - tsstart
+      - tzstart
+      - tsstop
+      - tzstop
+      - activity
+      - category
+    properties:
+      tsstart:
+        type: integer
+        description: Timestamp when activity started
+        example: 1509894699
+      tzstart:
+        type: integer
+        description: Local timezone offset
+        example: 10800
+      tsstop:
+        type: integer
+        description: Timestamp when activity stopped
+        example: 1509895699
+      tzstop:
+        type: integer
+        description: Local timezone offset
+        example: 10800
+      activity:
+        type: string
+        description: Activity name
+        example: "ansible"
+      category:
+        type: string
+        description: Activity category
+        example: "deployment"
+      comment:
+        type: string
+        description: Comment
+        example: "shipping freshly created app on new machines"
+  ActivityCmdStart:
+    required:
+      - cmd
+      - data
+    properties:
+      cmd:
+        type: string
+        example: 'activity-start'
+      data:
+        $ref: '#/definitions/ActivityCmdStartData'
+  ActivityCmdStartData:
+    required:
+      - tsstart
+      - tzstart
+      - activity
+      - category
+    properties:
+      tsstart:
+        type: integer
+        description: Timestamp when activity started
+        example: 1509895699
+      tzstart:
+        type: integer
+        description: Local timezone offset
+        example: 10800
+      activity:
+        type: string
+        description: Activity name
+        example: "ansible"
+      category:
+        type: string
+        description: Activity category
+        example: "deployment"
+      comment:
+        type: string
+        description: Comment
+        example: "shipping freshly created app on new machines"
+  ActivityCmdStop:
+    required:
+      - cmd
+      - data
+    properties:
+      cmd:
+        type: string
+        example: 'activity-stop'
+      data:
+        $ref: '#/definitions/ActivityCmdStopData'
+  ActivityCmdStopData:
+    required:
+      - tsstop
+      - tzstop
+    properties:
+      tsstop:
+        type: integer
+        description: Timestamp when activity stopped
+        example: 1509897699
+      tzstop:
+        type: integer
+        description: Local timezone offset
+        example: 10800
+  ActivityCmdDelete:
+    required:
+      - cmd
+      - data
+    properties:
+      cmd:
+        type: string
+        example: 'activity-delete'
+      data:
+        $ref: '#/definitions/ActivityCmdDeleteData'
+  ActivityCmdDeleteData:
+    required:
+      - id
+    properties:
+      id:
+        type: integer
+        description: Activity ID
+        example: 1
+  ActivityCmdUpdate:
+    required:
+      - cmd
+      - data
+    properties:
+      cmd:
+        type: string
+        example: 'activity-update'
+      data:
+        $ref: '#/definitions/ActivityCmdUpdateData'
+  ActivityCmdUpdateData:
+    required:
+      - id
+      - tsstart
+      - tzstart
+      - tsstop
+      - tzstop
+      - activity
+      - category
+    properties:
+      id:
+        type: integer
+        description: Activity ID
+        example: 1
+      tsstart:
+        type: integer
+        description: Timestamp when activity started
+        example: 1509894699
+      tzstart:
+        type: integer
+        description: Local timezone offset
+        example: 10800
+      tsstop:
+        type: integer
+        description: Timestamp when activity stopped
+        example: 1509895699
+      tzstop:
+        type: integer
+        description: Local timezone offset
+        example: 10800
+      activity:
+        type: string
+        description: Activity name
+        example: "ansible"
+      category:
+        type: string
+        description: Activity category
+        example: "deployment"
+      comment:
+        type: string
+        description: Comment
+        example: "shipping freshly created app on new machines"
+  ActivityCmdList:
+    required:
+      - cmd
+      - data
+    properties:
+      cmd:
+        type: string
+        example: 'activity-list'
+      data:
+        $ref: '#/definitions/ActivityCmdListData'
+  ActivityCmdListData:
+    required:
+      - tsstart
+      - tsstop
+    properties:
+      tsstart:
+        type: integer
+        description: Timestamp when activity started
+        example: 1509894699
+      tsstop:
+        type: integer
+        description: Timestamp when activity stopped
+        example: 1509895699
+  ActivityCmdListReply:
+    required:
+      - status
+    properties:
+      status:
+        type: integer
+        description: Operation return code
+        example: 200
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/ActivityCmdListReplyData'
+  ActivityCmdListReplyData:
+    required:
+      - id
+      - tsstart
+      - tzstart
+      - activity
+      - category
+    properties:
+      id:
+        type: integer
+        description: Activity ID
+        example: 1
+      tsstart:
+        type: integer
+        description: Timestamp when activity started
+        example: 1509894699
+      tzstart:
+        type: integer
+        description: Local timezone offset
+        example: 10800
+      tsstop:
+        type: integer
+        description: Timestamp when activity stopped
+        example: 1509895699
+      tzstop:
+        type: integer
+        description: Local timezone offset
+        example: 10800
+      activity:
+        type: string
+        description: Activity name
+        example: "ansible"
+      category:
+        type: string
+        description: Activity category
+        example: "deployment"
+      comment:
+        type: string
+        description: Comment
+        example: "shipping freshly created app on new machines"
