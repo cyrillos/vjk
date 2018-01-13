@@ -355,9 +355,9 @@
     (values-list (mapcar #'(lambda(v) (json-get v data))
                          '("id" "tsstart" "tzstart" "tsstop" "tzstop"
                            "activity" "category" "comment")))
-    (when (not (and id ts-start tz-start activity category))
+    (when (not (and id activity category))
       (return-from activity-update
-                   (ret-err "Missing activity id, start, activity or category")))
+                   (ret-err "Missing id, activity or category")))
     (let ((catid (db-lookup-signle db "category" "name" "=" category)))
         (when (and category (not catid))
           (setf catid (db-insert db "category" '("name") (list category)))
