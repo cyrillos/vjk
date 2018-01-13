@@ -272,7 +272,8 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         tz_start = int(x['tzstart'])
         timestamp_start = int(x['tsstart'])
 
-        if not 'tsstop' in x or x['tsstop'] == None:
+        if not 'tsstop' in x or x['tsstop'] == None or \
+            not 'tzstop' in x or x['tzstop'] == None:
             tz_stop = 0
             timestamp_stop = None
             spent = unix_timestamp() - timestamp_start
@@ -280,9 +281,9 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
             tz_stop = int(x['tzstop'])
             timestamp_stop = int(x['tsstop'])
             spent = timestamp_stop - timestamp_start
+            timestamp_stop += tz_stop
 
         timestamp_start += tz_start
-        timestamp_stop += tz_stop
 
         if args.long:
             timestamp_start_str = unix_strftime_long(timestamp_start)
@@ -352,7 +353,7 @@ def cmd_handler_activity_start(vjkcli, args, unknown_args):
     if activity == None:
         logging.error("Wrong activity format")
         return
-    vjkcli.activity_add(unix_timestamp(), None, tz_offset(),
+    vjkcli.activity_add(unix_timestamp(), tz_offset(), None, None,
                         activity, category, comment)
 
 def cmd_handler_activity_stop(vjkcli, args, unknown_args):
