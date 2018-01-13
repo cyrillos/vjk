@@ -197,7 +197,10 @@ def today_ends_unix_timestamp():
                                 t.tm_wday, t.tm_yday, t.tm_isdst)))
 
 def tz_offset():
-    return -int(time.timezone)
+    now = unix_timestamp()
+    utc = time.gmtime(now)
+    loc = time.localtime(now)
+    return int(time.mktime(loc) - time.mktime(utc))
 
 def timestamp_shift(timestamp, relative):
     if relative != None:
