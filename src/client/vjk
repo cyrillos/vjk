@@ -114,7 +114,7 @@ else:
         logging.error("Provide server configuration")
         sys.exit(1)
 
-if 'loglevel' not in conf:
+if 'loglevel-client' not in conf:
     loglevel = logging.DEBUG
 else:
     loglevel = get_loglevel(conf['loglevel-client'])
