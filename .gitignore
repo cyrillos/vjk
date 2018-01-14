@@ -4,5 +4,6 @@
 *.patch
 *.pyc
 cscope*
+patches/*
 tags
 TAGS
