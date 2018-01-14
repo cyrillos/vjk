@@ -204,7 +204,7 @@ def tz_offset():
 
 def timestamp_shift(timestamp, relative):
     if relative != None:
-        m = re.search('([\+\-]?)([0-9]+)([wdhm]?)', relative)
+        m = re.search('([\+\-]?)([0-9]+)([wdhm]?)([s]?)', relative)
         if m:
             if not m.group(2):
                 return None
@@ -219,6 +219,8 @@ def timestamp_shift(timestamp, relative):
                 step = 60
             else:
                 step = 1
+            if m.group(4) == 's':
+                timestamp = today_starts_unix_timestamp()
             if m.group(1) == '-':
                 relative = timestamp - val * step
             else:
