@@ -13,7 +13,7 @@ _vjk()
 
 	case "$prev" in
 	add)
-		COMPREPLY=($(compgen -W '--category --start --stop' -- $cur))
+		COMPREPLY=($(compgen -W '--category --start --tz-start --stop --tz-stop' -- $cur))
 		return
 		;;
 	edit)
