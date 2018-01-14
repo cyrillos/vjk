@@ -61,11 +61,13 @@ for cmd in ['add']:
     spp.add_argument('--start', dest = 'start',
                      help = 'Date and time activity started at. \
                      Format [YYYY-MM-DD] hh:mm:ss.')
+    spp.add_argument('--tz-start', dest = 'tz_start',
+                     help = 'Timezone offset in seconds on start.')
     spp.add_argument('--stop', dest = 'stop',
                      help = 'Date and time activity stopped at. \
                      Format [YYYY-MM-DD] hh:mm:ss.')
-    spp.add_argument('--tz', dest = 'tz',
-                     help = 'Timezone offset in seconds.')
+    spp.add_argument('--tz-stop', dest = 'tz_stop',
+                     help = 'Timezone offset in seconds on stop.')
 
 for cmd in ['edit']:
     spp = sp.add_parser(cmd, help = 'Edit activity/category')
@@ -370,13 +372,23 @@ def cmd_handler_activity_add(vjkcli, args, unknown_args):
     if activity == None:
         logging.error("Wrong activity format")
         return
+
     ts_start = unix_strptime_long(args.start)
-    tz_start = tz_offset()
     ts_stop = unix_strptime_long(args.stop)
+
+    if args.tz_start:
+        args.tz_start = int(args.tz_start)
+    else:
+        tz_start = tz_offset()
+
+    if args.tz_stop:
+       ts_stop  = int(args.tz_stop)
+    else:
+       ts_stop  = tz_offset()
+
     if ts_stop == None:
         tz_stop = None
-    else:
-        tz_stop = tz_offset()
+        tz_stop = None
     vjkcli.activity_add(ts_start, tz_start, ts_stop, tz_stop,
                         activity, category, comment)
 
