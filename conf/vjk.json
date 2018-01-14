@@ -4,5 +4,6 @@
 		"type": "sqlite3",
 		"path": "example/vjk.sqlite"
 	},
-	"loglevel": 4
+	"loglevel-server": 4,
+	"loglevel-client": 4
 }

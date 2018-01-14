@@ -111,7 +111,7 @@ else:
 if 'loglevel' not in conf:
     loglevel = logging.DEBUG
 else:
-    loglevel = get_loglevel(conf['loglevel'])
+    loglevel = get_loglevel(conf['loglevel-client'])
 
 logging.basicConfig(format = '%(asctime)s %(filename)s %(funcName)s %(message)s',
                     datefmt = '%m/%d/%Y %H:%M:%S', level = loglevel)

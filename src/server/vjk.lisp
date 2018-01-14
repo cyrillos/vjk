@@ -534,5 +534,5 @@
 (when (not *conf*)
     (pr-fatal "No '--conf path-to-conf' option provided"))
 
-(loglevel-set (json-get "loglevel" *conf*))
+(loglevel-set (json-get "loglevel-server" *conf*))
 (server *conf*)
