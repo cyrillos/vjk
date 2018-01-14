@@ -1,6 +1,6 @@
 _vjk()
 {
-	local cur prev words cword split=false
+	local cmd cur prev words cword split=false
 
 	if type -t _init_completion >/dev/null; then
 		_init_completion -n = || return
@@ -11,7 +11,13 @@ _vjk()
 		prev="${COMP_WORDS[COMP_CWORD-1]}"
 	fi
 
-	case "$prev" in
+	if [ $COMP_CWORD -gt 1 ] ; then
+		cmd="${COMP_WORDS[1]}"
+	else
+		cmd="$prev"
+	fi
+
+	case "$cmd" in
 	add)
 		COMPREPLY=($(compgen -W '--category --start --tz-start --stop --tz-stop' -- $cur))
 		return
@@ -34,7 +40,6 @@ _vjk()
 		;;
 	esac
 
-	$split && return
-	_filedir
+	return
 } &&
 complete -F _vjk vjk
