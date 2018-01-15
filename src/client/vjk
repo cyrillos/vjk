@@ -173,10 +173,12 @@ def unix_strftime_short(timestamp):
         return ''
     return datetime.utcfromtimestamp(timestamp).strftime('%H:%M:%S')
 
-def unix_strptime_long(time_string):
+def unix_strptime_long(time_string, tz_offset):
     if time_string == None:
         return None
     d = datetime.strptime(time_string, '%Y-%m-%d %H:%M:%S')
+    if tz_offset:
+        return int(calendar.timegm(d.timetuple())) - tz_offset
     return int(calendar.timegm(d.timetuple()))
 
 def unix_strptime_short(time_string):
@@ -377,22 +379,22 @@ def cmd_handler_activity_add(vjkcli, args, unknown_args):
         logging.error("Wrong activity format")
         return
 
-    ts_start = unix_strptime_long(args.start)
-    ts_stop = unix_strptime_long(args.stop)
-
     if args.tz_start:
         args.tz_start = int(args.tz_start)
     else:
         tz_start = tz_offset()
 
     if args.tz_stop:
-       ts_stop  = int(args.tz_stop)
+       tz_stop  = int(args.tz_stop)
     else:
-       ts_stop  = tz_offset()
+       tz_stop  = tz_offset()
+
+    ts_start = unix_strptime_long(args.start, tz_start)
+    ts_stop = unix_strptime_long(args.stop, tz_stop)
 
     if ts_stop == None:
         tz_stop = None
-        tz_stop = None
+
     vjkcli.activity_add(ts_start, tz_start, ts_stop, tz_stop,
                         activity, category, comment)
 
@@ -407,14 +409,23 @@ def cmd_handler_activity_edit(vjkcli, args, unknown_args):
         activity, category, comment = parse_activity_argument(unknown_args[0])
     else:
         activity, category, comment = (None, None, None)
-    args.start = unix_strptime_long(args.start)
-    args.stop = unix_strptime_long(args.stop)
+
     if args.tz_start:
         args.tz_start = int(args.tz_start)
     else:
         args.tz_start = tz_offset()
+
     if args.tz_stop:
-        args.tz_start = int(args.tz_stop)
+        args.tz_stop = int(args.tz_stop)
+    else:
+        args.tz_stop = tz_offset()
+
+    args.start = unix_strptime_long(args.start, args.tz_start)
+    args.stop = unix_strptime_long(args.stop, args.tz_stop)
+
+    if not args.stop:
+        args.tz_stop = None
+
     vjkcli.activity_update(args.id, args.start, args.tz_start,
                            args.stop, args.tz_stop,
                            activity, category, comment)
