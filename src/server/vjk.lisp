@@ -198,7 +198,7 @@
   (if (and allow-nils (null z))
       (format nil "~a~anull" x y)
       (if (typep z 'string)
-          (format nil "~a~a~s" x y z)
+          (format nil "~a~a'~a'" x y (remove #\' z))
           (format nil "~a~a~a" x y z))))
 
 (defun db-fmt-conds (cols conds vals &key allow-nils)
@@ -208,7 +208,7 @@
 
 (defun db-fmt-vals (vals)
   (let ((res (mapcar #'(lambda (v)
-                         (cond ((typep v 'string) (format nil "~s" v))
+                         (cond ((typep v 'string) (format nil "'~a'" (remove #\' v)))
                                ((null v) (string "null"))
                                (t (format nil "~d" v))))
                          vals)))
