@@ -252,6 +252,10 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
     if not 'data' in reply:
         return
 
+    timestamp_from += tz_offset()
+    if timestamp_to:
+        timestamp_to += tz_offset()
+
     if args.long:
         ts_len = 22
     else:
@@ -282,6 +286,9 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         tz_start = int(x['tzstart'])
         timestamp_start = int(x['tsstart'])
 
+        if (timestamp_start + tz_start) < timestamp_from:
+            continue
+
         if not 'tsstop' in x or x['tsstop'] == None or \
             not 'tzstop' in x or x['tzstop'] == None:
             tz_stop = 0
@@ -292,6 +299,10 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
             timestamp_stop = int(x['tsstop'])
             spent = timestamp_stop - timestamp_start
             timestamp_stop += tz_stop
+
+        if timestamp_to and timestamp_stop:
+            if timestamp_to > timestamp_stop:
+                continue
 
         timestamp_start += tz_start
 
