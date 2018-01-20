@@ -185,14 +185,26 @@
 ;;              @name                   category name
 ;;              @comment                comment
 
+(defparameter *tb-activity* nil)
+(defparameter *tb-category* nil)
+
+(defun get-table-info (db table-name)
+  (sqlite:execute-to-list db (format nil "pragma table_info(~s);" table-name)))
+
+(defun get-table-column-names (table-info)
+  (mapcar #'(lambda(col) (format nil "~s" (second col))) table-info))
+
+(defun db-fmt-cond (x y z &key allow-nils)
+  (if (and allow-nils (null z))
+      (format nil "~a~anull" x y)
+      (if (typep z 'string)
+          (format nil "~a~a~s" x y z)
+          (format nil "~a~a~a" x y z))))
+
 (defun db-fmt-conds (cols conds vals &key allow-nils)
   (loop for x in cols for y in conds for z in vals
         when (if allow-nils (and x y) (and x y z))
-        collect (values (if (typep z 'string)
-                              (format nil "~a~a~s" x y z)
-                              (if (and allow-nils (null z))
-                                  (format nil "~a~anull" x y)
-                                  (format nil "~a~a~a" x y z))))))
+        collect (values (db-fmt-cond x y z :allow-nils allow-nils))))
 
 (defun db-fmt-vals (vals)
   (let ((res (mapcar #'(lambda (v)
@@ -503,6 +515,10 @@
           (db (sqlite:connect (json-get "path" (json-get "database" conf)))))
       (when (not db)
         (pr-exit "Can't connect to backend database"))
+      (setf *tb-activity* (get-table-info db "activity"))
+      (setf *tb-category* (get-table-info db "category"))
+      (when (not (and *tb-activity* *tb-category*))
+        (pr-exit "Unexpected database structure"))
       (unwind-protect
         (loop do
               (let* ((sk-client (usocket:socket-accept sk-server))
