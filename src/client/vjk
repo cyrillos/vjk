@@ -434,7 +434,7 @@ def cmd_handler_category_edit(vjkcli, args, unknown_args):
     if len(unknown_args) < 1:
         logging.error("Not enough arguments provided")
         return
-    vjkcli.category_add(args.id, unknown_args[0])
+    vjkcli.category_update(args.id, unknown_args[0])
 
 cmd_handler = {
     'list':     [True, cmd_handler_activity_list, cmd_handler_category_list],
