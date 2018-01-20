@@ -242,10 +242,11 @@
       (sqlite:execute-non-query db req)
       (sqlite:last-insert-rowid db))))
 
-(defun db-update (db table cols conds vals id)
+(defun db-update (db table cols conds vals id &key allow-nils)
   (ignore-errors
     (let ((req (format nil "update ~a set ~{~a~^, ~} where id=~d;"
-                       table (db-fmt-conds cols conds vals :allow-nils t) id)))
+                       table (db-fmt-conds cols conds vals
+                                           :allow-nils allow-nils) id)))
       (pr-debug "db-update: ~a" req)
       (sqlite:execute-non-query db req)
       (sqlite:last-insert-rowid db))))
@@ -382,7 +383,7 @@
                            '("=" "=" "=" "=" "=" "=" "=")
                            (list (car catid) activity comment
                                  ts-start tz-start ts-stop tz-stop)
-                           id)))
+                           id :allow-nils t)))
           (when (not updated)
             (return-from activity-update
                          (ret-err "Unable to update activity")))
