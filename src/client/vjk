@@ -391,7 +391,7 @@ def cmd_handler_activity_add(vjkcli, args, unknown_args):
         return
 
     if args.tz_start:
-        args.tz_start = int(args.tz_start)
+        tz_start = int(args.tz_start)
     else:
         tz_start = tz_offset()
 
