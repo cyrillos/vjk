@@ -279,10 +279,8 @@
                    (ret-err "Missing timestamps, timezone, name or category")))
     (let ((catid (db-lookup-signle db "category" "name" "=" category)))
       (when (not catid)
-        (setf catid (db-insert db "category" '("name") (list category))))
-      (when (not catid)
         (return-from activity-insert
-                     (ret-err "Unable to insert category")))
+                     (ret-err "Unable to find category")))
       (let ((cols (list "catid" "name" "comment" "tsstart" "tzstart" "tsstop" "tzstop"))
             (vals (list (car catid) activity comment ts-start tz-start ts-stop tz-stop)))
         (let ((inserted (db-insert db "activity"
@@ -373,10 +371,9 @@
                    (ret-err "Missing id, activity or category")))
     (let ((catid (db-lookup-signle db "category" "name" "=" category)))
         (when (and category (not catid))
-          (setf catid (db-insert db "category" '("name") (list category)))
           (when (not catid)
             (return-from activity-update
-                         (ret-err "Unable to write category"))))
+                         (ret-err "Unable to find category"))))
         (let ((updated
                 (db-update db "activity"
                            '("catid" "name" "comment" "tsstart" "tzstart" "tsstop" "tzstop")
