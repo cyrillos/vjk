@@ -126,16 +126,6 @@ logging.debug('Configuration')
 logging.debug(pprint.pformat(conf))
 logging.debug(pprint.pformat(args))
 
-def get_dict_value(d, k, e, f):
-    if k in d:
-        if f == None:
-            return d[k]
-        return f(d[k], k)
-    return e
-
-def dict_value(d, k):
-    return get_dict_value(d, k, '', None)
-
 def reply_ok(reply):
     if reply:
         return reply.get('status') == 200
@@ -151,8 +141,10 @@ def reply_err(reply):
     sys.exit(1)
 
 def reply_verify_data(reply):
-    if reply_ok(reply) and reply.get('data'):
-        return True
+    if reply_ok(reply):
+        if reply.get('data'):
+            return True
+        return False
     reply_err(reply)
     return False
 
@@ -247,7 +239,8 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
     timestamp_to = timestamp_shift(timestamp, args.stop)
 
     reply = vjkcli.activity_list(timestamp_from, timestamp_to)
-    reply_verify_data(reply)
+    if not reply_verify_data(reply):
+        return
 
     timestamp_from += tz_offset()
     if timestamp_to:
@@ -260,8 +253,8 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
     catlen = 8
     namelen = 4
     for x in reply['data']:
-        catlen = max(len(dict_value(x, 'category')), catlen)
-        namelen = max(len(dict_value(x, 'name')), namelen)
+        catlen = max(len(x.get('category', '')), catlen)
+        namelen = max(len(x.get('name', '')), namelen)
 
     summary = int(0)
 
@@ -306,12 +299,12 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
 
         print(fmt.format(6, x['id'],
-                         (namelen + 2), dict_value(x, 'name'),
-                         catlen + 2, dict_value(x, 'category'),
+                         (namelen + 2), x.get('name', ''),
+                         catlen + 2, x.get('category', ''),
                          ts_len, timestamp_start_str,
                          ts_len, timestamp_stop_str,
                          14, hms,
-                         16, dict_value(x,'comment')))
+                         16, x.get('comment', '')))
     if args.summary:
         h, m, s = seconds_to_hms(summary)
         hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
@@ -319,18 +312,19 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
 
 def cmd_handler_category_list(vjkcli, args, unknown_args):
     reply = vjkcli.category_list()
-    reply_verify_data(reply)
+    if not reply_verify_data(reply):
+        return
 
     catlen = 8
     for x in reply['data']:
-        catlen = max(len(dict_value(x, 'category')), catlen)
+        catlen = max(len(x.get('category', '')), catlen)
 
     fmt = "{1:<{0:}}{3:<{2:}}"
     print(fmt.format(6, 'ID', catlen + 2, 'Category'))
 
     for x in reply['data']:
-        print(fmt.format(6, dict_value(x, 'id'),
-                         catlen + 2, dict_value(x, 'category')))
+        print(fmt.format(6, x.get('id', ''),
+                         catlen + 2, x.get('category','')))
 
 def cmd_handler_delete_record(vjkcli, args, unknown_args):
     if args.category:
