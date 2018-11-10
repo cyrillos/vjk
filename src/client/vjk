@@ -137,24 +137,24 @@ def dict_value(d, k):
     return get_dict_value(d, k, '', None)
 
 def reply_ok(reply):
-    if reply == None or 'status' not in reply:
-        return False
-    return reply['status'] == 200
+    if reply:
+        return reply.get('status') == 200
+    return False
 
 def reply_err(reply):
     if reply == None:
         logging.error("ERR: Reply is empty")
     else:
-        if 'status' in reply:
-            status = reply['status']
-        else:
-            status = ""
-        if 'data' in reply:
-            data = reply['data']
-        else:
-            data = ""
-        logging.error("ERR: Reply status %s data %s" % (status, data))
+        logging.error("ERR: Reply status %s data %s" %
+                      (reply.get('status', ""),
+                       reply.get('data', "")))
     sys.exit(1)
+
+def reply_verify_data(reply):
+    if reply_ok(reply) and reply.get('data'):
+        return True
+    reply_err(reply)
+    return False
 
 def seconds_to_hms(seconds):
     h = seconds // 3600
@@ -247,10 +247,7 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
     timestamp_to = timestamp_shift(timestamp, args.stop)
 
     reply = vjkcli.activity_list(timestamp_from, timestamp_to)
-    if not reply_ok(reply):
-        reply_err(reply)
-    if not 'data' in reply:
-        return
+    reply_verify_data(reply)
 
     timestamp_from += tz_offset()
     if timestamp_to:
@@ -278,30 +275,21 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
                      16, 'Comment'))
 
     for x in reply['data']:
-        if not 'tsstart' in x or x['tsstart'] == None:
-            continue
-        if not 'tzstart' in x or x['tzstart'] == None:
-            continue
-
-        tz_start = int(x['tzstart'])
-        timestamp_start = int(x['tsstart'])
+        tz_start = int(x.get('tzstart', 0))
+        timestamp_start = int(x.get('tsstart', 0))
 
         if (timestamp_start + tz_start) < timestamp_from:
             continue
 
-        if not 'tsstop' in x or x['tsstop'] == None or \
-            not 'tzstop' in x or x['tzstop'] == None:
-            tz_stop = 0
-            timestamp_stop = None
+        tz_stop = int(x.get('tzstop', 0))
+        timestamp_stop = int(x.get('tsstop', 0))
+        if timestamp_stop == 0:
             spent = unix_timestamp() - timestamp_start
         else:
-            tz_stop = int(x['tzstop'])
-            timestamp_stop = int(x['tsstop'])
             spent = timestamp_stop - timestamp_start
             timestamp_stop += tz_stop
 
-        if timestamp_to and timestamp_stop:
-            if timestamp_to > timestamp_stop:
+        if timestamp_to and timestamp_to > timestamp_stop:
                 continue
 
         timestamp_start += tz_start
@@ -331,10 +319,7 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
 
 def cmd_handler_category_list(vjkcli, args, unknown_args):
     reply = vjkcli.category_list()
-    if not reply_ok(reply):
-        reply_err(reply)
-    if not 'data' in reply:
-        return
+    reply_verify_data(reply)
 
     catlen = 8
     for x in reply['data']:
