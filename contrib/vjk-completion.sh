@@ -31,7 +31,7 @@ _vjk()
 		return
 		;;
 	list)
-		COMPREPLY=($(compgen -W '--category --start --stop --summary --long' -- $cur))
+		COMPREPLY=($(compgen -W '--merge --category --start --stop --summary --long' -- $cur))
 		return
 		;;
 	vjk)
