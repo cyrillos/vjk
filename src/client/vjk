@@ -47,6 +47,8 @@ for cmd in ['list']:
                      help = 'Category mode', action = 'store_true')
     spp.add_argument('--summary', dest = 'summary',
                      help = 'Show summary time spent', action = 'store_true')
+    spp.add_argument('--merge', dest = 'merge',
+                     help = 'Merge same activities', action = 'store_true')
     spp.add_argument('--long', dest = 'long',
                      help = 'Long output for time records.', action = 'store_true')
     spp.add_argument('--start', dest = 'start',
@@ -267,7 +269,59 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
                      14, 'Duration',
                      16, 'Comment'))
 
+    #
+    # When merging we're manging the name so user
+    # will notice and extend stop time.
+    if args.merge:
+        merged = { }
+        def can_merge_ts(x, y):
+            for i in ['tzstart', 'tzstop', 'tsstart', 'tsstop']:
+                if not x.get(i) or not y.get(i):
+                    return False
+            for i in ['tzstart', 'tzstop']:
+                if int(x.get(i)) != int(y.get(i)):
+                    return False
+            return True
+
+        for i, x in enumerate(reply['data']):
+            name = x.get('name', '')
+            if len(name) == 0:
+                continue
+            if name not in merged:
+                merged[name] = [[i, x]]
+            else:
+                merged[name].append([i, x])
+
+        for name in [i for i in merged.keys()]:
+            if len(merged[name]) == 1:
+                del merged[name]
+                continue
+            for i in range(1, len(merged[name])):
+                x = merged[name][i][1]
+                y = merged[name][i-1][1]
+                if not can_merge_ts(x, y):
+                    del merged[name]
+                    break
+
+        for name in [i for i in merged.keys()]:
+            x = reply['data'][merged[name][0][0]]
+            x['name'] += '*' # mark as merged
+            x_timestamp_start = int(x.get('tsstart', 0))
+            x_timestamp_stop = int(x.get('tsstop', 0))
+            for i in range(1, len(merged[name])):
+                y = reply['data'][merged[name][i][0]]
+                y_timestamp_start = int(y.get('tsstart', 0))
+                y_timestamp_stop = int(y.get('tsstop', 0))
+                spent = y_timestamp_stop - y_timestamp_start
+                x_timestamp_stop += spent
+                y['skip'] = True
+            x['tsstop'] = str(x_timestamp_stop)
+            del merged[name]
+
     for x in reply['data']:
+        if x.get('skip'):
+            continue
+
         tz_start = int(x.get('tzstart', 0))
         timestamp_start = int(x.get('tsstart', 0))
 
@@ -305,6 +359,7 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
                          ts_len, timestamp_stop_str,
                          14, hms,
                          16, x.get('comment', '')))
+
     if args.summary:
         h, m, s = seconds_to_hms(summary)
         hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
