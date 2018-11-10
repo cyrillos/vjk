@@ -24,9 +24,13 @@ class Vjk:
 
     def receive(self):
         try:
-            # FIXM 16K might be not enough
-            seq = self.sock.recv(16 << 10)
-            return json.loads(seq.decode('utf8').replace("'", '"'))
+            data = b''
+            while True:
+                seq = self.sock.recv(16 << 10)
+                if not seq:
+                    break
+                data += seq
+            return json.loads(data.decode('utf8').replace("'", '"'))
         except:
             return None
 
