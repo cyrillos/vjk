@@ -360,6 +360,18 @@
                 :callback #'gen-activity-recs
                 :data (list db recs)) nil))))
 
+(defun activity-last (db data)
+  (pr-debug "activity-last: ~a" data)
+  (let ((recs
+          (db-lookup db "activity"
+                     '("id") '("=")
+                     (list (db-last-id db "activity")) nil)))
+    (when (not recs)
+      (return-from activity-last (ret-ok)))
+    (values (json-encode-reply-ok
+              :callback #'gen-activity-recs
+              :data (list db recs)) nil)))
+
 (defun activity-update (db data)
   (pr-debug "activity-update ~a" data)
   (multiple-value-bind (id ts-start tz-start ts-stop tz-stop activity category comment)
@@ -487,6 +499,8 @@
            (activity-stop db data))
           ((string= "activity-list" cmd)
            (activity-list db data))
+          ((string= "activity-last" cmd)
+           (activity-last db data))
           ((string= "activity-update" cmd)
            (activity-update db data))
           ((string= "activity-delete" cmd)
