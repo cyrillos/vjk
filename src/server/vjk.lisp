@@ -185,9 +185,6 @@
 ;;              @name                   category name
 ;;              @comment                comment
 
-(defparameter *tb-activity* nil)
-(defparameter *tb-category* nil)
-
 (defun get-table-info (db table-name)
   (sqlite:execute-to-list db (format nil "pragma table_info(~s);" table-name)))
 
@@ -255,6 +252,32 @@
   (ignore-errors
     (sqlite:execute-single
       db (format nil "select * from ~s order by id desc limit 1;" table))))
+
+(defun db-create (db)
+  (ignore-errors
+    (sqlite:execute-single
+      db (format nil
+                 (concatenate 'string
+                              "create table if not exists category"
+                              "(id integer primary key not null,"
+                              "name varchar(64) not null,"
+                              "comment text);")))
+    (sqlite:execute-single
+      db (format nil
+                 (concatenate 'string
+                              "create table if not exists activity"
+                              "(id integer primary key not null,"
+                              "catid integer not null default (null),"
+                              "name varchar(64) not null,"
+                              "comment text,"
+                              "tsstart integer default (null),"
+                              "tzstart integer default (null),"
+                              "tsstop integer default (null),"
+                              "tzstop integer default (null));")))))
+
+(defun db-verify (db)
+  (and (get-table-info db "activity")
+       (get-table-info db "category")))
 
 ;;
 ;; Main code
@@ -527,10 +550,10 @@
           (db (sqlite:connect (json-get "path" (json-get "database" conf)))))
       (when (not db)
         (pr-exit "Can't connect to backend database"))
-      (setf *tb-activity* (get-table-info db "activity"))
-      (setf *tb-category* (get-table-info db "category"))
-      (when (not (and *tb-activity* *tb-category*))
-        (pr-exit "Unexpected database structure"))
+      (when (not (db-verify db))
+        (db-create db)
+        (when (not (db-verify db))
+          (pr-exit "Unexpected database structure")))
       (unwind-protect
         (loop do
               (let* ((sk-client (usocket:socket-accept sk-server))
