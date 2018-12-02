@@ -99,6 +99,8 @@
   (json-encode-reply 400 :callback callback :data data))
 
 (defun json-reply (sk-ustream data)
+  (let ((header (format nil "{\"size\":~7d}" (length data))))
+    (write-sequence (utf8-to header) sk-ustream))
   (write-sequence (utf8-to data) sk-ustream)
   (force-output sk-ustream))
 
@@ -284,13 +286,13 @@
 ;;
 
 (defmacro ret-err(&optional msg)
-  `(values (json-encode-reply-err :data ,msg) nil))
+  `(values (json-encode-reply-err :data ,msg) nil nil))
 
 (defmacro ret-fatal(&optional msg)
-  `(values (json-encode-reply-err :data ,msg) t))
+  `(values (json-encode-reply-err :data ,msg) t t))
 
-(defmacro ret-ok(&key (should-exit nil))
-  `(values (json-encode-reply-ok) ,should-exit))
+(defmacro ret-ok(&key (should-exit nil) (should-fini nil))
+  `(values (json-encode-reply-ok) ,should-exit ,should-fini))
 
 (defun activity-insert (db data)
   (pr-debug "activity-insert: ~a" data)
@@ -536,6 +538,8 @@
            (category-update db data))
           ((string= "category-delete" cmd)
            (category-delete db data))
+          ((string= "fini" cmd)
+           (ret-ok :should-exit nil :should-fini t))
           ((string= "exit" cmd)
            (ret-ok :should-exit t))
           (t (ret-err (format nil "Unknown command ~a" cmd))))))
@@ -558,17 +562,31 @@
         (loop do
               (let* ((sk-client (usocket:socket-accept sk-server))
                      (client-ustream (usocket:socket-stream sk-client)))
+                (pr-debug "conn: accept ~a~a => ~a~a"
+                          (usocket:get-local-address sk-client)
+                          (usocket:get-local-port sk-client)
+                          (usocket:get-peer-address sk-client)
+                          (usocket:get-peer-port sk-client))
                 (sb-thread:make-thread
                   (lambda ()
-                    (multiple-value-bind (reply-data should-exit)
-                      (funcall #'handle-request db client-ustream)
-                      (when reply-data
-                        (pr-debug "server: reply-data ~a" reply-data)
-                        (json-reply client-ustream reply-data))
-                      (close client-ustream)
-                      (usocket:socket-close sk-client)
-                      (when should-exit
-                        (pr-exit "Exiting: ~a:~a" ip port)))))))))))
+                    (loop do
+                          (multiple-value-bind (reply-data should-exit should-fini)
+                            (funcall #'handle-request db client-ustream)
+                            (when reply-data
+                              (pr-debug "server: reply-data ~a" reply-data)
+                              (json-reply client-ustream reply-data))
+                            (when (or should-fini should-exit)
+                              (pr-debug "conn: close ~a~a => ~a~a"
+                                        (usocket:get-local-address sk-client)
+                                        (usocket:get-local-port sk-client)
+                                        (usocket:get-peer-address sk-client)
+                                        (usocket:get-peer-port sk-client))
+                              (close client-ustream)
+                              (usocket:socket-close sk-client)
+                              (when should-exit
+                                (usocket:socket-close sk-server)
+                                (pr-exit "Exiting: ~a:~a" ip port))
+                              (loop-finish))))))))))))
 
 (defun process-args (argv)
   (when argv

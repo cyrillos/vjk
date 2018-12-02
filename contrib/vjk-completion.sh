@@ -35,7 +35,7 @@ _vjk()
 		return
 		;;
 	vjk)
-		COMPREPLY=($(compgen -W 'start stop list add edit delete exit' -- $cur))
+		COMPREPLY=($(compgen -W 'start restart stop list add edit delete exit' -- $cur))
 		return
 		;;
 	esac

@@ -38,6 +38,9 @@ for cmd in ['start']:
     spp = sp.add_parser(cmd, help = 'Start an activity. \
                         Format "activity@category,comment".')
 
+for cmd in ['restart']:
+    spp = sp.add_parser(cmd, help = 'Restart last activity.')
+
 for cmd in ['stop']:
     spp = sp.add_parser(cmd, help = 'Stop the current activity if running.')
 
@@ -127,6 +130,23 @@ logging.basicConfig(format = '%(asctime)s %(filename)s %(funcName)s %(message)s'
 logging.debug('Configuration')
 logging.debug(pprint.pformat(conf))
 logging.debug(pprint.pformat(args))
+
+#
+# FIXME: Need to fix usocket:socket-stream in server
+# to be able to send replies without reconnecting,
+# for some reason force-output didn't help.
+def open_client():
+    vjkcli = vjk.Vjk(logging, conf)
+    if vjkcli.connected() == False:
+        logging.error("Not connected")
+        sys.exit(1)
+    return vjkcli
+def close_client(vjkcli):
+    vjkcli.fini()
+    return None
+def reopen_client(vjkcli):
+    close_client(vjkcli)
+    return open_client()
 
 def reply_ok(reply):
     if reply:
@@ -401,6 +421,12 @@ def parse_activity_argument(arg):
     return (m.group(1), m.group(2), comment)
 
 def cmd_handler_activity_start(vjkcli, args, unknown_args):
+    last_rec = vjkcli.activity_last()
+    if len(last_rec.get('data',[])):
+        tsstop = last_rec['data'][0].get('tsstop')
+        if not tsstop:
+            logging.error("Found an unfinished activity, stop it first")
+            return
     if len(unknown_args) < 1:
         logging.error("Not enough arguments provided")
         return
@@ -414,6 +440,18 @@ def cmd_handler_activity_start(vjkcli, args, unknown_args):
 def cmd_handler_activity_stop(vjkcli, args, unknown_args):
     vjkcli.activity_stop(unix_timestamp(), tz_offset())
     return
+
+def cmd_handler_activity_restart(vjkcli, args, unknown_args):
+    last_rec = vjkcli.activity_last()
+    if 'data' not in last_rec or len(last_rec['data']) < 1:
+        logging.error("Can't fetch data")
+        return
+    rec  = last_rec['data'][0].get('name', '') + "@" + \
+        last_rec['data'][0].get('category', '')
+    comment = last_rec['data'][0].get('comment')
+    if comment:
+        rec += "," + comment
+    cmd_handler_activity_start(vjkcli, args, [rec])
 
 def cmd_handler_activity_add(vjkcli, args, unknown_args):
     if len(unknown_args) < 1 or args.start == None:
@@ -486,10 +524,12 @@ cmd_handler = {
     'delete':   [True, cmd_handler_delete_record, cmd_handler_delete_record],
     'exit':     [False, cmd_handler_server_exit, cmd_handler_invalid],
     'start':    [False, cmd_handler_activity_start, cmd_handler_invalid],
+    'restart':  [False, cmd_handler_activity_restart, cmd_handler_invalid],
     'stop':     [False, cmd_handler_activity_stop, cmd_handler_invalid],
     'add':      [True, cmd_handler_activity_add, cmd_handler_category_add],
     'edit':     [True, cmd_handler_activity_edit, cmd_handler_category_edit],
 }
+
 
 vjkcli = vjk.Vjk(logging, conf)
 if vjkcli.connected() == False:
@@ -504,3 +544,5 @@ if args.cmd in cmd_handler:
             cmd_handler[args.cmd][1](vjkcli, args, unknown_args)
     else:
         cmd_handler[args.cmd][1](vjkcli, args, unknown_args)
+
+vjkcli.fini()

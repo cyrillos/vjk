@@ -19,30 +19,48 @@ class Vjk:
             self.sock = None
             self.log.error("Vjk: Can't connect %s:%s" % (self.addr, self.port))
 
+    def fini(self):
+        if self.connected():
+            obj = { 'cmd': 'fini' }
+            self.send(obj)
+            self.sock.close()
+            self.sock = None
+            self.log.debug("Vjk: Disconnected")
+
     def connected(self):
         return self.sock != None
 
     def receive(self):
         try:
-            data = b''
-            while True:
-                seq = self.sock.recv(16 << 10)
-                if not seq:
-                    break
-                data += seq
-            return json.loads(data.decode('utf8').replace("'", '"'))
+            data = self.sock.recv(16)
+            m = json.loads(data.decode('utf8').replace("'", '"'))
+            if m.get('size'):
+                self.log.debug("Vjk: recv size: %d" % (m.get('size')))
+                data = self.sock.recv(int(m.get('size')))
+                return json.loads(data.decode('utf8').replace("'", '"'))
+            else:
+                self.log.error("Vjk: no size obtained %s" % (repr(data)))
+        except:
+            return None
+
+    def send_only(self, obj):
+        try:
+            seq = json.dumps(obj).encode()
+            hdr = ("{\"size\":%7d}" % (len(seq))).encode('utf-8')
+            self.log.debug("Vjk: send: %s %s" % (hdr, seq))
+            self.sock.send(hdr)
+            self.sock.send(seq)
         except:
             return None
 
     def send(self, obj):
-        seq = json.dumps(obj).encode()
-        hdr = ("{\"size\":%7d}" % (len(seq))).encode('utf-8')
-        self.log.debug("Vjk: send: %s %s" % (hdr, seq))
-        self.sock.send(hdr)
-        self.sock.send(seq)
-        recv = self.receive()
-        self.log.debug("Vjk: recv: %s" % (repr(recv)))
-        return recv
+        self.send_only(obj)
+        try:
+            recv = self.receive()
+            self.log.debug("Vjk: recv: %s" % (repr(recv)))
+            return recv
+        except:
+            return None
 
     def server_exit(self):
         self.log.debug("Vjk: server_exit")
@@ -76,6 +94,11 @@ class Vjk:
         if comment:
             data['comment'] = comment
         obj = { 'cmd': 'activity-start', 'data': data }
+        return self.send(obj)
+
+    def activity_last(self):
+        self.log.debug("Vjk: activity_last")
+        obj = { 'cmd': 'activity-last' }
         return self.send(obj)
 
     def activity_stop(self, ts_stop, tz_stop):
