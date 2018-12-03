@@ -65,7 +65,7 @@ class Vjk:
     def server_exit(self):
         self.log.debug("Vjk: server_exit")
         obj = { 'cmd': 'exit' }
-        return self.send(obj)
+        self.send_only(obj)
 
     def activity_add(self, ts_start, tz_start,
                      ts_stop, tz_stop,
