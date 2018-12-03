@@ -131,23 +131,6 @@ logging.debug('Configuration')
 logging.debug(pprint.pformat(conf))
 logging.debug(pprint.pformat(args))
 
-#
-# FIXME: Need to fix usocket:socket-stream in server
-# to be able to send replies without reconnecting,
-# for some reason force-output didn't help.
-def open_client():
-    vjkcli = vjk.Vjk(logging, conf)
-    if vjkcli.connected() == False:
-        logging.error("Not connected")
-        sys.exit(1)
-    return vjkcli
-def close_client(vjkcli):
-    vjkcli.fini()
-    return None
-def reopen_client(vjkcli):
-    close_client(vjkcli)
-    return open_client()
-
 def reply_ok(reply):
     if reply:
         return reply.get('status') == 200
