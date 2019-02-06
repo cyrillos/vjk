@@ -137,14 +137,17 @@ class Vjk:
         obj = { 'cmd': 'activity-update', 'data': data }
         return self.send(obj)
 
-    def activity_list(self, ts_start, ts_stop):
-        self.log.debug("Vjk: activity_list: %s %s" %
-                       (repr(ts_start), repr(ts_stop)))
+    def activity_list(self, ts_start=None, ts_stop=None, activity_id=None):
+        self.log.debug("Vjk: activity_list: %s %s %s" %
+                       (repr(ts_start), repr(ts_stop), repr(activity_id)))
         data = { }
-        if ts_start:
-            data['tsstart'] = ts_start
-        if ts_stop:
-            data['tsstop'] = ts_stop
+        if activity_id:
+            data['id'] = activity_id
+        else:
+            if ts_start:
+                data['tsstart'] = ts_start
+            if ts_stop:
+                data['tsstop'] = ts_stop
         obj = { 'cmd': 'activity-list', 'data': data }
         return self.send(obj)
 

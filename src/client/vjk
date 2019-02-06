@@ -40,6 +40,8 @@ for cmd in ['start']:
 
 for cmd in ['restart']:
     spp = sp.add_parser(cmd, help = 'Restart last activity.')
+    spp.add_argument('--id', dest = 'id', help = 'Activity ID',
+                     required = False)
 
 for cmd in ['stop']:
     spp = sp.add_parser(cmd, help = 'Stop the current activity if running.')
@@ -425,10 +427,19 @@ def cmd_handler_activity_stop(vjkcli, args, unknown_args):
     return
 
 def cmd_handler_activity_restart(vjkcli, args, unknown_args):
-    last_rec = vjkcli.activity_last()
+    if args.id:
+        last_rec = vjkcli.activity_list(activity_id=args.id)
+    else:
+        last_rec = vjkcli.activity_last()
     if 'data' not in last_rec or len(last_rec['data']) < 1:
         logging.error("Can't fetch data")
         return
+    tsstop = last_rec['data'][0].get('tsstop')
+    if not tsstop:
+        logging.error("Found an unfinished activity, stop it first")
+        return
+    if not last_rec['data'][0].get('tsstop'):
+        logging.error('Last activity is still active')
     rec  = last_rec['data'][0].get('name', '') + "@" + \
         last_rec['data'][0].get('category', '')
     comment = last_rec['data'][0].get('comment')

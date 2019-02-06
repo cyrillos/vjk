@@ -34,6 +34,10 @@ _vjk()
 		COMPREPLY=($(compgen -W '--merge --category --start --stop --summary --long' -- $cur))
 		return
 		;;
+	restart)
+		COMPREPLY=($(compgen -W '--id' -- $cur))
+		return
+		;;
 	vjk)
 		COMPREPLY=($(compgen -W 'start restart stop list add edit delete exit' -- $cur))
 		return

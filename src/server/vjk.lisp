@@ -255,6 +255,11 @@
     (sqlite:execute-single
       db (format nil "select * from ~s order by id desc limit 1;" table))))
 
+(defun db-list-id (db table id)
+  (ignore-errors
+    (sqlite:execute-single
+      db (format nil "select * from ~s where id=~d;" table id))))
+
 (defun db-create (db)
   (ignore-errors
     (sqlite:execute-single
@@ -370,15 +375,21 @@
 (defun activity-list (db data)
   (pr-debug "activity-list: ~a" data)
   (let ((ts-start (json-get "tsstart" data))
-        (ts-stop (json-get "tsstop" data)))
-    (when (not ts-start)
+        (ts-stop (json-get "tsstop" data))
+        (id (json-get "id" data)))
+    (when (and (not ts-start) (not id))
       (return-from activity-list
-                   (ret-err "Missing time start/stop parameters")))
+                   (ret-err "Missing time start/stop/id parameters")))
     (let ((recs
-            (db-lookup db "activity"
-                       '("tsstart" "tsstop")
-                       '(">=" "<=")
-                       (list ts-start ts-stop) nil)))
+            (if (not id)
+                (db-lookup db "activity"
+                           '("tsstart" "tsstop")
+                           '(">=" "<=")
+                           (list ts-start ts-stop) nil)
+                (db-lookup db "activity"
+                           '("id")
+                           '("=")
+                           (list id ) nil))))
       (when (not recs)
         (return-from activity-list (ret-ok)))
       (values (json-encode-reply-ok
