@@ -137,9 +137,10 @@ class Vjk:
         obj = { 'cmd': 'activity-update', 'data': data }
         return self.send(obj)
 
-    def activity_list(self, ts_start=None, ts_stop=None, activity_id=None):
-        self.log.debug("Vjk: activity_list: %s %s %s" %
-                       (repr(ts_start), repr(ts_stop), repr(activity_id)))
+    def activity_list(self, ts_start=None, ts_stop=None, activity_id=None, catid=None):
+        self.log.debug("Vjk: activity_list: %s %s %s %s" %
+                       (repr(ts_start), repr(ts_stop),
+                        repr(activity_id), repr(catid)))
         data = { }
         if activity_id:
             data['id'] = activity_id
@@ -148,6 +149,8 @@ class Vjk:
                 data['tsstart'] = ts_start
             if ts_stop:
                 data['tsstop'] = ts_stop
+        if catid:
+            data['catid'] = catid
         obj = { 'cmd': 'activity-list', 'data': data }
         return self.send(obj)
 
@@ -174,8 +177,10 @@ class Vjk:
         obj = { 'cmd': 'category-update', 'data': data }
         return self.send(obj)
 
-    def category_list(self):
+    def category_list(self, name=None):
         obj = { 'cmd': 'category-list' }
+        if name:
+            obj['data'] = { 'name': name }
         return self.send(obj)
 
     def category_delete(self, eid):

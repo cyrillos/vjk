@@ -49,7 +49,9 @@ for cmd in ['stop']:
 for cmd in ['list']:
     spp = sp.add_parser(cmd, help = 'List activities/categories')
     spp.add_argument('--category', dest = 'category',
-                     help = 'Category mode', action = 'store_true')
+                     help = 'Show categories', action = 'store_true')
+    spp.add_argument('--filter-category', dest = 'filter_category',
+                     help = 'Filter by category')
     spp.add_argument('--summary', dest = 'summary',
                      help = 'Show summary time spent', action = 'store_true')
     spp.add_argument('--merge', dest = 'merge',
@@ -245,7 +247,16 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         timestamp_from = today_starts_unix_timestamp()
     timestamp_to = timestamp_shift(timestamp, args.stop)
 
-    reply = vjkcli.activity_list(timestamp_from, timestamp_to)
+    if args.filter_category:
+        reply = vjkcli.category_list(name=args.filter_category)
+        if not reply_verify_data(reply):
+            return
+        if len(reply['data']) > 0:
+            catid=reply['data'][0].get('id', None)
+    else:
+        catid=None
+
+    reply = vjkcli.activity_list(timestamp_from, timestamp_to, catid=catid)
     if not reply_verify_data(reply):
         return
 

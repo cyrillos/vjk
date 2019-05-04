@@ -376,16 +376,17 @@
   (pr-debug "activity-list: ~a" data)
   (let ((ts-start (json-get "tsstart" data))
         (ts-stop (json-get "tsstop" data))
-        (id (json-get "id" data)))
+        (id (json-get "id" data))
+        (catid (json-get "catid" data)))
     (when (and (not ts-start) (not id))
       (return-from activity-list
                    (ret-err "Missing time start/stop/id parameters")))
     (let ((recs
             (if (not id)
                 (db-lookup db "activity"
-                           '("tsstart" "tsstop")
-                           '(">=" "<=")
-                           (list ts-start ts-stop) nil)
+                           (list "tsstart" "tsstop" (if catid "catid"))
+                           (list ">=" "<=" (if catid "="))
+                           (list ts-start ts-stop catid) "and")
                 (db-lookup db "activity"
                            '("id")
                            '("=")
@@ -464,15 +465,19 @@
 
 (defun category-list (db data)
   (pr-debug "category-list ~a" data)
-  (let ((recs
-          (db-lookup db "category"
-                     '("id" "name")
-                     nil nil nil)))
-    (when (not recs)
-      (return-from category-list (ret-ok)))
-    (values (json-encode-reply-ok
-              :callback #'gen-category-recs
-              :data (list db recs)) nil)))
+  (let ((name (json-get "name" data)))
+    (let ((recs
+            (if name
+                (list (db-lookup-signle db "category"
+                                  "name" "=" (values name)))
+                (db-lookup db "category"
+                           '("id" "name")
+                           nil nil nil))))
+      (when (not recs)
+        (return-from category-list (ret-ok)))
+      (values (json-encode-reply-ok
+                :callback #'gen-category-recs
+                :data (list db recs)) nil))))
 
 (defun category-update (db data)
   (pr-debug "category-update ~a" data)
