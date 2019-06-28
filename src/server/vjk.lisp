@@ -250,10 +250,14 @@
       (sqlite:execute-non-query db req)
       (sqlite:last-insert-rowid db))))
 
-(defun db-last-id (db table)
+(defun db-last-id (db table &optional cond-where)
+  (pr-debug "db-last-id table ~a cond-where ~a" table cond-where)
   (ignore-errors
-    (sqlite:execute-single
-      db (format nil "select * from ~s order by id desc limit 1;" table))))
+    (if cond-where
+        (sqlite:execute-single
+          db (format nil "select * from ~s where ~a order by id desc limit 1;" table cond-where))
+        (sqlite:execute-single
+          db (format nil "select * from ~s order by id desc limit 1;" table)))))
 
 (defun db-list-id (db table id)
   (ignore-errors
@@ -399,10 +403,11 @@
 
 (defun activity-last (db data)
   (pr-debug "activity-last: ~a" data)
-  (let ((recs
-          (db-lookup db "activity"
-                     '("id") '("=")
-                     (list (db-last-id db "activity")) nil)))
+  (let* ((catid (json-get "catid" data))
+         (cond-where (if catid (format nil "catid=~d" catid) nil))
+         (recs (db-lookup db "activity"
+                          '("id") '("=")
+                          (list (db-last-id db "activity" cond-where)) nil)))
     (when (not recs)
       (return-from activity-last (ret-ok)))
     (values (json-encode-reply-ok

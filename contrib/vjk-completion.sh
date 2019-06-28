@@ -35,7 +35,7 @@ _vjk()
 		return
 		;;
 	restart)
-		COMPREPLY=($(compgen -W '--id' -- $cur))
+		COMPREPLY=($(compgen -W '--id --filter-category' -- $cur))
 		return
 		;;
 	vjk)

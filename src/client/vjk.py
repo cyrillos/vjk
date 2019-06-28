@@ -96,9 +96,17 @@ class Vjk:
         obj = { 'cmd': 'activity-start', 'data': data }
         return self.send(obj)
 
-    def activity_last(self):
-        self.log.debug("Vjk: activity_last")
+    def activity_last(self, filter_category=None):
+        self.log.debug("Vjk: activity_last filter_category %s" %
+                       repr(filter_category))
         obj = { 'cmd': 'activity-last' }
+        if filter_category:
+            reply = self.category_list(name=filter_category)
+            if reply.get('status') == 200 and len(reply['data']) > 0:
+                catid=reply['data'][0].get('id', None)
+                if catid:
+                    data = {'catid': catid}
+                    obj['data'] = data
         return self.send(obj)
 
     def activity_stop(self, ts_stop, tz_stop):
