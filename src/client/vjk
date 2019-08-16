@@ -27,6 +27,10 @@ def get_loglevel(num):
         return lvl_nums[num]
     return logging.ERROR
 
+start_re = re.compile(r'([\-]?)(\d+)([wdh])([s]?)')
+start_date_re = re.compile(r'(\d\d\d\d)-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)')
+start_short_date_re = re.compile(r'(\d\d\d\d)-(\d\d)-(\d\d)')
+
 parser = argparse.ArgumentParser(prog='vjk.py')
 
 parser.add_argument('--conf', dest = 'conf',
@@ -61,9 +65,17 @@ for cmd in ['list']:
     spp.add_argument('--long', dest = 'long',
                      help = 'Long output for time records.', action = 'store_true')
     spp.add_argument('--start', dest = 'start',
-                     help = 'Time to report from. Format [-|+]number[d|h|m])')
+                     help = 'Time to report from. Format [-]number[w|d|h])')
     spp.add_argument('--stop', dest = 'stop',
-                     help = 'Time to report until. Format [-|+]number[d|h|m])')
+                     help = 'Time to report until. Format [-]number[w|d|h])')
+    spp.add_argument('--start-date', dest = 'start_date',
+                     help = 'Date to report from. Format YYYY-MM-DD hh:mm:ss)')
+    spp.add_argument('--stop-date', dest = 'stop_date',
+                     help = 'Date to report until. Format YYYY-MM-DD hh:mm:ss)')
+    spp.add_argument('--start-short-date', dest = 'start_short_date',
+                     help = 'Date to report from. Format YYYY-MM-DD)')
+    spp.add_argument('--stop-short-date', dest = 'stop_short_date',
+                     help = 'Date to report until. Format YYYY-MM-DD)')
 
 for cmd in ['add']:
     spp = sp.add_parser(cmd, help = 'Add activities/categories')
@@ -176,7 +188,7 @@ def unix_strftime_short(timestamp):
         return ''
     return datetime.utcfromtimestamp(timestamp).strftime('%H:%M:%S')
 
-def unix_strptime_long(time_string, tz_offset):
+def unix_strptime_long(time_string, tz_offset) -> int:
     if time_string == None:
         return None
     d = datetime.strptime(time_string, '%Y-%m-%d %H:%M:%S')
@@ -184,87 +196,198 @@ def unix_strptime_long(time_string, tz_offset):
         return int(calendar.timegm(d.timetuple())) - tz_offset
     return int(calendar.timegm(d.timetuple()))
 
-def unix_strptime_short(time_string):
-    if time_string == None:
-        return None
-    d = datetime.strptime(time_string, '%H:%M:%S')
-    t1 = d.timetuple()
-    t2 = time.gmtime()
-    return int(calendar.timegm((t2.tm_year, t2.tm_mon, t2.tm_mday,
-                                t1.tm_hour, t1.tm_min, t1.tm_sec,
-                                t2.tm_wday, t2.tm_yday, t2.tm_isdst)))
-
-def unix_timestamp():
+def unix_timestamp() -> int:
     return int(time.time())
 
-def today_starts_unix_timestamp():
-    t = time.gmtime()
-    return int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
-                                t.tm_wday, t.tm_yday, t.tm_isdst)))
-
-def today_ends_unix_timestamp():
-    t = time.gmtime()
-    return int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday, 23, 59, 59,
-                                t.tm_wday, t.tm_yday, t.tm_isdst)))
-
-def tz_offset():
+def tz_offset() -> int:
     now = unix_timestamp()
     utc = time.gmtime(now)
     loc = time.localtime(now)
     return int(time.mktime(loc) - time.mktime(utc))
 
-def timestamp_shift(timestamp, relative):
-    if relative != None:
-        m = re.search('([\+\-]?)([0-9]+)([wdhm]?)([s]?)', relative)
-        if m:
-            if not m.group(2):
-                return None
-            val = int(m.group(2))
-            if m.group(3) == 'w':
-                step = 7 * 24 * 60 * 60
-            elif m.group(3) == 'd':
-                step = 24 * 60 * 60
-            elif m.group(3) == 'h':
-                step = 60 * 60
-            elif m.group(3) == 'm':
-                step = 60
-            else:
-                step = 1
-            if m.group(4) == 's':
-                timestamp = today_starts_unix_timestamp()
-            if m.group(1) == '-':
-                relative = timestamp - val * step
-            else:
-                relative = timestamp + val * step
-    return relative
+def today_starts_unix_timestamp() -> int:
+    t = time.gmtime()
+    #t = time.localtime()
+    timestamp = int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
+                                     t.tm_wday, t.tm_yday, t.tm_isdst)))
+    return timestamp - tz_offset()
+
+# YYYY-MM-DD hh:mm:ss -> 2019-08-16 12:11:36
+def timestamp_from_date(date_string: str) -> int:
+#    obj = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
+#    timestamp = int(datetime.timestamp(obj))
+    t = time.strptime(date_string, '%Y-%m-%d %H:%M:%S')
+    timestamp = int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday,
+                                     t.tm_hour, t.tm_min, t.tm_sec,
+                                     t.tm_wday, t.tm_yday, t.tm_isdst)))
+    return timestamp - tz_offset()
+
+# YYYY-MM-DD -> 2019-08-16 00:00:00
+def timestamp_from_short_date(date_string: str) -> int:
+    t = time.strptime(date_string, '%Y-%m-%d')
+    timestamp = int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
+                                     t.tm_wday, t.tm_yday, t.tm_isdst)))
+    return timestamp - tz_offset()
+
+def timestamp_adjust_verify(offset_string) -> bool:
+    m = start_re.search(offset_string)
+    return True if m else False
+
+def timestamp_from_date_verify(date_string) -> bool:
+    m = start_date_re.search(date_string)
+    return True if m else False
+
+def timestamp_from_short_date_verify(date_string) -> bool:
+    m = start_short_date_re.search(date_string)
+    return True if m else False
+
+def timestamp_adjust(timestamp, offset_format):
+    timestamp_result = None
+
+    m = start_re.search(args.start)
+    val = int(m.group(2))       # number of weeks, etc
+
+    if m.group(3) == 'w':       # weeks
+        seconds = 7 * 24 * 60 * 60
+    elif m.group(3) == 'd':     # days
+        seconds = 24 * 60 * 60
+    elif m.group(3) == 'h':     # hours
+        seconds = 60 * 60
+    else:
+        seconds = 1
+
+    if m.group(4) == 's':       # as it starts of
+        timestamp = today_starts_unix_timestamp()
+
+    if m.group(1) == '-':       # negative
+        timestamp_result = timestamp - val * seconds
+
+    return timestamp_result
+
+def merge_records(reply):
+    merged = { }
+    def can_merge_ts(x, y):
+        #
+        # Make sure they are finished
+        for i in ['tzstart', 'tzstop', 'tsstart', 'tsstop']:
+            if not x.get(i) or not y.get(i):
+                return False
+        #
+        # Make sure timezone is the same
+        for i in ['tzstart', 'tzstop']:
+            if int(x.get(i)) != int(y.get(i)):
+                return False
+        return True
+
+    #
+    # Chain by names
+    for i, rec in enumerate(reply['data']):
+        name = rec.get('name')
+        if not name:
+            continue
+        if name in merged:
+            merged[name].append([i, rec])
+        else:
+            merged[name] = [[i, rec]]
+
+    #
+    # Drop single records or entries
+    # which can't be merged.
+    for name in [n for n in merged.keys()]:
+        if len(merged[name]) == 1:
+            del merged[name]
+            continue
+        for i in range(1, len(merged[name])):
+            x = merged[name][i][1]
+            y = merged[name][i-1][1]
+            if not can_merge_ts(x,y):
+                del merged[name]
+                break
+
+    #
+    # Now do a real merge: keep first record
+    # from the chain, all others should
+    # be removed. Note that since we track
+    # the position in @reply, we can't drop
+    # records instead we mark them as @skip.
+    for name in [n for n in merged.keys()]:
+        pos = merged[name][0][0]
+        x = reply['data'][pos]
+        x['name'] += '*' # mark as merged
+        x_timestamp_start = int(x.get('tsstart', 0))
+        x_timestamp_stop = int(x.get('tsstop', 0))
+        for i in range(1, len(merged[name])):
+            pos = merged[name][i][0]
+            y = reply['data'][pos]
+            y_timestamp_start = int(y.get('tsstart', 0))
+            y_timestamp_stop = int(y.get('tsstop', 0))
+            spent = y_timestamp_stop - y_timestamp_start
+            x_timestamp_stop += spent
+            y['skip'] = True # Skip from future processing
+        x['tsstop'] = str(x_timestamp_stop)
+        del merged[name]
 
 def cmd_handler_invalid(vjkcli, args, unknown_args):
     parser.print_help()
     sys.exit(1)
 
 def cmd_handler_activity_list(vjkcli, args, unknown_args):
-    timestamp = unix_timestamp()
-    timestamp_from = timestamp_shift(timestamp, args.start)
-    if timestamp_from == None:
-        timestamp_from = today_starts_unix_timestamp()
-    timestamp_to = timestamp_shift(timestamp, args.stop)
+    timezone_offset = tz_offset()
+    report_from = None
+    report_until = None
 
+    if args.start:
+        if not timestamp_adjust_verify(args.start):
+            logging.error("Wrong specificator %s",
+                          args.start)
+            return
+        report_from = timestamp_adjust(unix_timestamp(), args.start)
+    elif args.start_date:
+        if not timestamp_from_date_verify(args.start_date):
+            logging.error("Wrong specificator %s",
+                          args.start_date)
+            return
+        report_from = timestamp_from_date(args.start_date)
+    elif args.start_short_date:
+        if not timestamp_from_short_date_verify(args.start_short_date):
+            logging.error("Wrong specificator %s",
+                          args.start_short_date)
+            return
+        report_from = timestamp_from_short_date(args.start_short_date)
+    if report_from == None:
+        report_from = today_starts_unix_timestamp()
+
+    if args.stop:
+        if not timestamp_adjust_verify(args.stop):
+            logging.error("Wrong specificator %s", args.stop)
+            return
+        report_until = timestamp_adjust(unix_timestamp(), args.stop)
+    elif args.stop_date:
+        if not timestamp_from_date_verify(args.stop_date):
+            logging.error("Wrong specificator %s", args.stop_date)
+            return
+        report_until = timestamp_from_date(args.stop_date)
+    elif args.stop_short_date:
+        if not timestamp_from_short_date_verify(args.stop_short_date):
+            logging.error("Wrong specificator %s", args.stop_short_date)
+            return
+        report_until = timestamp_from_short_date(args.stop_short_date)
+
+    catid = None
     if args.filter_category:
         reply = vjkcli.category_list(name=args.filter_category)
         if not reply_verify_data(reply):
             return
         if len(reply['data']) > 0:
             catid=reply['data'][0].get('id', None)
-    else:
-        catid=None
 
-    reply = vjkcli.activity_list(timestamp_from, timestamp_to, catid=catid)
+    #
+    # We assume the time-zone offset is constant and
+    # matches time-zone of the system. Otherwise need
+    # to be fixed.
+    reply = vjkcli.activity_list(report_from, report_until, catid=catid)
     if not reply_verify_data(reply):
         return
-
-    timestamp_from += tz_offset()
-    if timestamp_to:
-        timestamp_to += tz_offset()
 
     if args.long:
         ts_len = 22
@@ -291,59 +414,19 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
     # When merging we're manging the name so user
     # will notice and extend stop time.
     if args.merge:
-        merged = { }
-        def can_merge_ts(x, y):
-            for i in ['tzstart', 'tzstop', 'tsstart', 'tsstop']:
-                if not x.get(i) or not y.get(i):
-                    return False
-            for i in ['tzstart', 'tzstop']:
-                if int(x.get(i)) != int(y.get(i)):
-                    return False
-            return True
-
-        for i, x in enumerate(reply['data']):
-            name = x.get('name', '')
-            if len(name) == 0:
-                continue
-            if name not in merged:
-                merged[name] = [[i, x]]
-            else:
-                merged[name].append([i, x])
-
-        for name in [i for i in merged.keys()]:
-            if len(merged[name]) == 1:
-                del merged[name]
-                continue
-            for i in range(1, len(merged[name])):
-                x = merged[name][i][1]
-                y = merged[name][i-1][1]
-                if not can_merge_ts(x, y):
-                    del merged[name]
-                    break
-
-        for name in [i for i in merged.keys()]:
-            x = reply['data'][merged[name][0][0]]
-            x['name'] += '*' # mark as merged
-            x_timestamp_start = int(x.get('tsstart', 0))
-            x_timestamp_stop = int(x.get('tsstop', 0))
-            for i in range(1, len(merged[name])):
-                y = reply['data'][merged[name][i][0]]
-                y_timestamp_start = int(y.get('tsstart', 0))
-                y_timestamp_stop = int(y.get('tsstop', 0))
-                spent = y_timestamp_stop - y_timestamp_start
-                x_timestamp_stop += spent
-                y['skip'] = True
-            x['tsstop'] = str(x_timestamp_stop)
-            del merged[name]
+        merge_records(reply)
 
     for x in reply['data']:
         if x.get('skip'):
             continue
 
         tz_start = int(x.get('tzstart', 0))
+        if tz_start != timezone_offset:
+            logging.error("Unexpected tzstart")
+            continue
         timestamp_start = int(x.get('tsstart', 0))
 
-        if (timestamp_start + tz_start) < timestamp_from:
+        if timestamp_start < report_from:
             continue
 
         tz_stop = int(x.get('tzstop', 0))
@@ -351,13 +434,17 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         if timestamp_stop == 0:
             spent = unix_timestamp() - timestamp_start
         else:
-            spent = timestamp_stop - timestamp_start
-            timestamp_stop += tz_stop
-
-        if timestamp_to and timestamp_to > timestamp_stop:
+            if tz_stop != timezone_offset:
+                logging.error("Unexpected tzstop")
                 continue
+            spent = timestamp_stop - timestamp_start
+
+        if report_until and report_until < timestamp_start:
+            continue
 
         timestamp_start += tz_start
+        if timestamp_stop:
+            timestamp_stop += tz_stop
 
         if args.long:
             timestamp_start_str = unix_strftime_long(timestamp_start)
@@ -461,6 +548,9 @@ def cmd_handler_activity_restart(vjkcli, args, unknown_args):
     cmd_handler_activity_start(vjkcli, args, [rec])
 
 def cmd_handler_activity_add(vjkcli, args, unknown_args):
+    logging.error("Disabled for a while")
+    return
+
     if len(unknown_args) < 1 or args.start == None:
         logging.error("Not enough arguments provided")
         return
@@ -536,7 +626,6 @@ cmd_handler = {
     'add':      [True, cmd_handler_activity_add, cmd_handler_category_add],
     'edit':     [True, cmd_handler_activity_edit, cmd_handler_category_edit],
 }
-
 
 vjkcli = vjk.Vjk(logging, conf)
 if vjkcli.connected() == False:
