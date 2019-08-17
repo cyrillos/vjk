@@ -388,7 +388,7 @@
     (let ((recs
             (if (not id)
                 (db-lookup db "activity"
-                           (list "tsstart" "tsstop" (if catid "catid"))
+                           (list "tsstart" "tsstart" (if catid "catid"))
                            (list ">=" "<=" (if catid "="))
                            (list ts-start ts-stop catid) "and")
                 (db-lookup db "activity"
