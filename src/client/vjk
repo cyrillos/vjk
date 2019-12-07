@@ -14,6 +14,7 @@ import re
 from datetime import datetime
 
 import vjk
+import vjktz
 
 def get_loglevel(num):
     lvl_nums = {
@@ -26,10 +27,6 @@ def get_loglevel(num):
     if num in lvl_nums:
         return lvl_nums[num]
     return logging.ERROR
-
-start_re = re.compile(r'([\-]?)(\d+)([wdh])([s]?)')
-start_date_re = re.compile(r'(\d\d\d\d)-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)')
-start_short_date_re = re.compile(r'(\d\d\d\d)-(\d\d)-(\d\d)')
 
 parser = argparse.ArgumentParser(prog='vjk.py')
 
@@ -78,19 +75,9 @@ for cmd in ['list']:
                      help = 'Date to report until. Format YYYY-MM-DD)')
 
 for cmd in ['add']:
-    spp = sp.add_parser(cmd, help = 'Add activities/categories')
+    spp = sp.add_parser(cmd, help = 'Add category')
     spp.add_argument('--category', dest = 'category',
                      help = 'Category mode', action = 'store_true')
-    spp.add_argument('--start', dest = 'start',
-                     help = 'Date and time activity started at. \
-                     Format [YYYY-MM-DD] hh:mm:ss.')
-    spp.add_argument('--tz-start', dest = 'tz_start',
-                     help = 'Timezone offset in seconds on start.')
-    spp.add_argument('--stop', dest = 'stop',
-                     help = 'Date and time activity stopped at. \
-                     Format [YYYY-MM-DD] hh:mm:ss.')
-    spp.add_argument('--tz-stop', dest = 'tz_stop',
-                     help = 'Timezone offset in seconds on stop.')
 
 for cmd in ['edit']:
     spp = sp.add_parser(cmd, help = 'Edit activity/category')
@@ -99,13 +86,9 @@ for cmd in ['edit']:
     spp.add_argument('--start', dest = 'start',
                      help = 'Date and time activity started at. \
                      Format [YYYY-MM-DD] hh:mm:ss.')
-    spp.add_argument('--tz-start', dest = 'tz_start',
-                     help = 'Timezone offset in seconds on start.')
     spp.add_argument('--stop', dest = 'stop',
                      help = 'Date and time activity stopped at. \
                      Format [YYYY-MM-DD] hh:mm:ss.')
-    spp.add_argument('--tz-stop', dest = 'tz_stop',
-                     help = 'Timezone offset in seconds on stop.')
     spp.add_argument('--id', dest = 'id', help = 'Activity/category ID',
                      required = True)
 
@@ -150,11 +133,15 @@ logging.debug(pprint.pformat(conf))
 logging.debug(pprint.pformat(args))
 
 def reply_ok(reply):
+    '''Test if server reply is OK'''
+
     if reply:
         return reply.get('status') == 200
     return False
 
 def reply_err(reply):
+    '''Log server error and exit'''
+
     if reply == None:
         logging.error("ERR: Reply is empty")
     else:
@@ -164,105 +151,15 @@ def reply_err(reply):
     sys.exit(1)
 
 def reply_verify_data(reply):
+    '''Validate server reply'''
+
     if reply_ok(reply):
         if reply.get('data'):
             return True
         return False
+
     reply_err(reply)
     return False
-
-def seconds_to_hms(seconds):
-    h = seconds // 3600
-    seconds -= h * 3600
-    m = seconds // 60
-    seconds -= m * 60
-    return (h, m, seconds)
-
-def unix_strftime_long(timestamp):
-    if timestamp == None or timestamp == 0:
-        return ''
-    return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-
-def unix_strftime_short(timestamp):
-    if timestamp == None or timestamp == 0:
-        return ''
-    return datetime.utcfromtimestamp(timestamp).strftime('%H:%M:%S')
-
-def unix_strptime_long(time_string, tz_offset) -> int:
-    if time_string == None:
-        return None
-    d = datetime.strptime(time_string, '%Y-%m-%d %H:%M:%S')
-    if tz_offset:
-        return int(calendar.timegm(d.timetuple())) - tz_offset
-    return int(calendar.timegm(d.timetuple()))
-
-def unix_timestamp() -> int:
-    return int(time.time())
-
-def tz_offset() -> int:
-    now = unix_timestamp()
-    utc = time.gmtime(now)
-    loc = time.localtime(now)
-    return int(time.mktime(loc) - time.mktime(utc))
-
-def today_starts_unix_timestamp() -> int:
-    t = time.gmtime()
-    #t = time.localtime()
-    timestamp = int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
-                                     t.tm_wday, t.tm_yday, t.tm_isdst)))
-    return timestamp - tz_offset()
-
-# YYYY-MM-DD hh:mm:ss -> 2019-08-16 12:11:36
-def timestamp_from_date(date_string: str) -> int:
-#    obj = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
-#    timestamp = int(datetime.timestamp(obj))
-    t = time.strptime(date_string, '%Y-%m-%d %H:%M:%S')
-    timestamp = int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday,
-                                     t.tm_hour, t.tm_min, t.tm_sec,
-                                     t.tm_wday, t.tm_yday, t.tm_isdst)))
-    return timestamp - tz_offset()
-
-# YYYY-MM-DD -> 2019-08-16 00:00:00
-def timestamp_from_short_date(date_string: str) -> int:
-    t = time.strptime(date_string, '%Y-%m-%d')
-    timestamp = int(calendar.timegm((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0,
-                                     t.tm_wday, t.tm_yday, t.tm_isdst)))
-    return timestamp - tz_offset()
-
-def timestamp_adjust_verify(offset_string) -> bool:
-    m = start_re.search(offset_string)
-    return True if m else False
-
-def timestamp_from_date_verify(date_string) -> bool:
-    m = start_date_re.search(date_string)
-    return True if m else False
-
-def timestamp_from_short_date_verify(date_string) -> bool:
-    m = start_short_date_re.search(date_string)
-    return True if m else False
-
-def timestamp_adjust(timestamp, offset_format):
-    timestamp_result = None
-
-    m = start_re.search(args.start)
-    val = int(m.group(2))       # number of weeks, etc
-
-    if m.group(3) == 'w':       # weeks
-        seconds = 7 * 24 * 60 * 60
-    elif m.group(3) == 'd':     # days
-        seconds = 24 * 60 * 60
-    elif m.group(3) == 'h':     # hours
-        seconds = 60 * 60
-    else:
-        seconds = 1
-
-    if m.group(4) == 's':       # as it starts of
-        timestamp = today_starts_unix_timestamp()
-
-    if m.group(1) == '-':       # negative
-        timestamp_result = timestamp - val * seconds
-
-    return timestamp_result
 
 def merge_records(reply):
     merged = { }
@@ -327,51 +224,41 @@ def merge_records(reply):
         x['tsstop'] = str(x_timestamp_stop)
         del merged[name]
 
-def cmd_handler_invalid(vjkcli, args, unknown_args):
+def cmd_handler_invalid(vjkcli, vjktz, args, unknown_args):
+    '''Print help and exit'''
+
     parser.print_help()
     sys.exit(1)
 
-def cmd_handler_activity_list(vjkcli, args, unknown_args):
-    timezone_offset = tz_offset()
-    report_from = None
-    report_until = None
+def cmd_handler_activity_list(vjkcli, vjktz, args, unknown_args):
+    '''List activities'''
+
+    timezone_offset = vjktz.tzoff()
 
     if args.start:
-        if not timestamp_adjust_verify(args.start):
-            logging.error("Wrong specificator %s",
-                          args.start)
-            return
-        report_from = timestamp_adjust(unix_timestamp(), args.start)
+        report_from = vjktz.epoch_local_relative(args.start)
     elif args.start_date:
-        if not timestamp_from_date_verify(args.start_date):
-            logging.error("Wrong specificator %s",
-                          args.start_date)
-            return
-        report_from = timestamp_from_date(args.start_date)
+        report_from = vjktz.epoch_local_strptime_long(args.start_date)
     elif args.start_short_date:
-        if not timestamp_from_short_date_verify(args.start_short_date):
-            logging.error("Wrong specificator %s",
-                          args.start_short_date)
-            return
-        report_from = timestamp_from_short_date(args.start_short_date)
-    if report_from == None:
-        report_from = today_starts_unix_timestamp()
+        report_from = vjktz.epoch_local_strptime_short(args.start_short_date)
+    else:
+        #
+        # If nothing specified use local today's start of day
+        report_from = vjktz.epoch_local_000000()
+    if report_from < 0:
+        logging.error("Wrong start date/time specificator")
+        return
 
+    report_until = None
     if args.stop:
-        if not timestamp_adjust_verify(args.stop):
-            logging.error("Wrong specificator %s", args.stop)
-            return
-        report_until = timestamp_adjust(unix_timestamp(), args.stop)
+        report_until = vjktz.epoch_local_relative(args.stop)
     elif args.stop_date:
-        if not timestamp_from_date_verify(args.stop_date):
-            logging.error("Wrong specificator %s", args.stop_date)
-            return
-        report_until = timestamp_from_date(args.stop_date)
+        report_until = vjktz.epoch_local_strptime_long(args.stop_date)
     elif args.stop_short_date:
-        if not timestamp_from_short_date_verify(args.stop_short_date):
-            logging.error("Wrong specificator %s", args.stop_short_date)
-            return
-        report_until = timestamp_from_short_date(args.stop_short_date)
+        report_until = vjktz.epoch_local_strptime_short(args.stop_short_date)
+    if report_until and report_until < 0:
+        logging.error("Wrong stop date/time specificator")
+        return
 
     catid = None
     if args.filter_category:
@@ -383,8 +270,8 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
 
     #
     # We assume the time-zone offset is constant and
-    # matches time-zone of the system. Otherwise need
-    # to be fixed.
+    # matches time-zone of the system. Otherwise this
+    # needs to be fixed.
     reply = vjkcli.activity_list(report_from, report_until, catid=catid)
     if not reply_verify_data(reply):
         return
@@ -421,7 +308,7 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
             continue
 
         tz_start = int(x.get('tzstart', 0))
-        if tz_start != timezone_offset:
+        if tz_start != vjktz.tzoff():
             logging.error("Unexpected tzstart")
             continue
         timestamp_start = int(x.get('tsstart', 0))
@@ -432,9 +319,9 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         tz_stop = int(x.get('tzstop', 0))
         timestamp_stop = int(x.get('tsstop', 0))
         if timestamp_stop == 0:
-            spent = unix_timestamp() - timestamp_start
+            spent = vjktz.epoch() - timestamp_start
         else:
-            if tz_stop != timezone_offset:
+            if tz_stop != vjktz.tzoff():
                 logging.error("Unexpected tzstop")
                 continue
             spent = timestamp_stop - timestamp_start
@@ -442,19 +329,15 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
         if report_until and report_until < timestamp_start:
             continue
 
-        timestamp_start += tz_start
-        if timestamp_stop:
-            timestamp_stop += tz_stop
-
         if args.long:
-            timestamp_start_str = unix_strftime_long(timestamp_start)
-            timestamp_stop_str = unix_strftime_long(timestamp_stop)
+            timestamp_start_str = vjktz.local_strftime_long(timestamp_start)
+            timestamp_stop_str = vjktz.local_strftime_long(timestamp_stop)
         else:
-            timestamp_start_str = unix_strftime_short(timestamp_start)
-            timestamp_stop_str = unix_strftime_short(timestamp_stop)
+            timestamp_start_str = vjktz.local_strftime_short(timestamp_start)
+            timestamp_stop_str = vjktz.local_strftime_short(timestamp_stop)
 
         summary += spent
-        h, m, s = seconds_to_hms(spent)
+        h, m, s = vjktz.seconds_to_hms(spent)
         hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
 
         print(fmt.format(6, x['id'],
@@ -466,11 +349,13 @@ def cmd_handler_activity_list(vjkcli, args, unknown_args):
                          16, x.get('comment', '')))
 
     if args.summary:
-        h, m, s = seconds_to_hms(summary)
+        h, m, s = vjktz.seconds_to_hms(summary)
         hms = "{0:04d}:{1:02d}:{2:02d}".format(h, m, s)
         print("---\nSummary: %s" % (hms))
 
-def cmd_handler_category_list(vjkcli, args, unknown_args):
+def cmd_handler_category_list(vjkcli, vjktz, args, unknown_args):
+    '''List categories'''
+
     reply = vjkcli.category_list()
     if not reply_verify_data(reply):
         return
@@ -486,145 +371,143 @@ def cmd_handler_category_list(vjkcli, args, unknown_args):
         print(fmt.format(6, x.get('id', ''),
                          catlen + 2, x.get('category','')))
 
-def cmd_handler_delete_record(vjkcli, args, unknown_args):
+def cmd_handler_delete_record(vjkcli, vjktz, args, unknown_args):
+    '''Delete record by id'''
+
     if args.category:
         vjkcli.category_delete(int(args.id))
     else:
         vjkcli.activity_delete(int(args.id))
 
-def cmd_handler_server_exit(vjkcli, args, unknown_args):
+def cmd_handler_server_exit(vjkcli, vjktz, args, unknown_args):
+    '''Exit server'''
+
     vjkcli.server_exit()
 
 def parse_activity_argument(arg):
-    # activity@category|comment
+    '''Parse string in format activity@category|comment
+    and return a tuple (activity,category,comment)'''
+
     m = re.match("([^\@]+)\@([^\,]+)(\,.+)?", arg)
     if m == None or m.group(1) == None or m.group(2) == None:
         return (None, None, None)
+
     comment = m.group(3)
     if comment != None:
         comment = m.group(3)[1:]
+
     return (m.group(1), m.group(2), comment)
 
-def cmd_handler_activity_start(vjkcli, args, unknown_args):
+def cmd_handler_activity_start(vjkcli, vjktz, args, unknown_args):
+    '''Start new activity'''
+
+    # Previous must be stopped
     last_rec = vjkcli.activity_last()
     if len(last_rec.get('data',[])):
         tsstop = last_rec['data'][0].get('tsstop')
         if not tsstop:
             logging.error("Found an unfinished activity, stop it first")
             return
+
     if len(unknown_args) < 1:
         logging.error("Not enough arguments provided")
         return
+
     activity, category, comment = parse_activity_argument(unknown_args[0])
     if activity == None:
         logging.error("Wrong activity format")
         return
-    vjkcli.activity_add(unix_timestamp(), tz_offset(), None, None,
-                        activity, category, comment)
 
-def cmd_handler_activity_stop(vjkcli, args, unknown_args):
-    vjkcli.activity_stop(unix_timestamp(), tz_offset())
+    vjkcli.activity_add(vjktz.epoch(), vjktz.tzoff(),
+                        None, None, activity, category, comment)
+
+def cmd_handler_activity_stop(vjkcli, vjktz, args, unknown_args):
+    '''Stop current activity'''
+
+    vjkcli.activity_stop(vjktz.epoch(), vjktz.tzoff())
     return
 
-def cmd_handler_activity_restart(vjkcli, args, unknown_args):
+def cmd_handler_activity_restart(vjkcli, vjktz, args, unknown_args):
+    '''Restart activity'''
+
     if args.id:
         last_rec = vjkcli.activity_list(activity_id=args.id)
     else:
         last_rec = vjkcli.activity_last(filter_category=args.filter_category)
+
     if 'data' not in last_rec or len(last_rec['data']) < 1:
         logging.error("Can't fetch data")
         return
+
     tsstop = last_rec['data'][0].get('tsstop')
     if not tsstop:
         logging.error("Found an unfinished activity, stop it first")
         return
+
     if not last_rec['data'][0].get('tsstop'):
         logging.error('Last activity is still active')
+
     rec  = last_rec['data'][0].get('name', '') + "@" + \
         last_rec['data'][0].get('category', '')
+
     comment = last_rec['data'][0].get('comment')
     if comment:
         rec += "," + comment
-    cmd_handler_activity_start(vjkcli, args, [rec])
 
-def cmd_handler_activity_add(vjkcli, args, unknown_args):
-    logging.error("Disabled for a while")
-    return
-
-    if len(unknown_args) < 1 or args.start == None:
-        logging.error("Not enough arguments provided")
-        return
-    activity, category, comment = parse_activity_argument(unknown_args[0])
-    if activity == None:
-        logging.error("Wrong activity format")
-        return
-
-    if args.tz_start:
-        tz_start = int(args.tz_start)
-    else:
-        tz_start = tz_offset()
-
-    if args.tz_stop:
-       tz_stop  = int(args.tz_stop)
-    else:
-       tz_stop  = tz_offset()
-
-    ts_start = unix_strptime_long(args.start, tz_start)
-    ts_stop = unix_strptime_long(args.stop, tz_stop)
-
-    if ts_stop == None:
-        tz_stop = None
-
-    vjkcli.activity_add(ts_start, tz_start, ts_stop, tz_stop,
-                        activity, category, comment)
+    cmd_handler_activity_start(vjkcli, vjktz, args, [rec])
 
 def cmd_handler_category_add(vjkcli, args, unknown_args):
+    '''Add new category'''
+
     if len(unknown_args) < 1:
         logging.error("Not enough arguments provided")
         return
+
     vjkcli.category_add(unknown_args[0])
 
-def cmd_handler_activity_edit(vjkcli, args, unknown_args):
+def cmd_handler_activity_edit(vjkcli, vjktz, args, unknown_args):
+    '''Edit existing activity'''
+
     if len(unknown_args) > 0:
         activity, category, comment = parse_activity_argument(unknown_args[0])
     else:
         activity, category, comment = (None, None, None)
 
-    if args.tz_start:
-        args.tz_start = int(args.tz_start)
+    args.start = vjktz.epoch_local_strptime_long(args.start)
+    if args.start < 0:
+        logging.error("Wrong start time format")
+    tz_start = vjktz.tzoff()
+
+    if args.stop:
+        args.stop = vjktz.epoch_local_strptime_long(args.stop)
+        if args.stop < 0:
+            logging.error("Wrong stop time format")
+        tz_stop = vjktz.tzoff()
     else:
-        args.tz_start = tz_offset()
+        tz_stop = None
 
-    if args.tz_stop:
-        args.tz_stop = int(args.tz_stop)
-    else:
-        args.tz_stop = tz_offset()
-
-    args.start = unix_strptime_long(args.start, args.tz_start)
-    args.stop = unix_strptime_long(args.stop, args.tz_stop)
-
-    if not args.stop:
-        args.tz_stop = None
-
-    vjkcli.activity_update(args.id, args.start, args.tz_start,
-                           args.stop, args.tz_stop,
+    vjkcli.activity_update(args.id, args.start, tz_start,
+                           args.stop, tz_stop,
                            activity, category, comment)
 
 def cmd_handler_category_edit(vjkcli, args, unknown_args):
+    '''Edit category'''
+
     if len(unknown_args) < 1:
         logging.error("Not enough arguments provided")
         return
+
     vjkcli.category_update(args.id, unknown_args[0])
 
 cmd_handler = {
-    'list':     [True, cmd_handler_activity_list, cmd_handler_category_list],
-    'delete':   [True, cmd_handler_delete_record, cmd_handler_delete_record],
-    'exit':     [False, cmd_handler_server_exit, cmd_handler_invalid],
-    'start':    [False, cmd_handler_activity_start, cmd_handler_invalid],
-    'restart':  [False, cmd_handler_activity_restart, cmd_handler_invalid],
-    'stop':     [False, cmd_handler_activity_stop, cmd_handler_invalid],
-    'add':      [True, cmd_handler_activity_add, cmd_handler_category_add],
-    'edit':     [True, cmd_handler_activity_edit, cmd_handler_category_edit],
+    'list':     [True,  cmd_handler_activity_list,      cmd_handler_category_list],
+    'delete':   [True,  cmd_handler_delete_record,      cmd_handler_delete_record],
+    'exit':     [False, cmd_handler_server_exit,        cmd_handler_invalid],
+    'start':    [False, cmd_handler_activity_start,     cmd_handler_invalid],
+    'restart':  [False, cmd_handler_activity_restart,   cmd_handler_invalid],
+    'stop':     [False, cmd_handler_activity_stop,      cmd_handler_invalid],
+    'add':      [True,  cmd_handler_invalid,            cmd_handler_category_add],
+    'edit':     [True,  cmd_handler_activity_edit,      cmd_handler_category_edit],
 }
 
 vjkcli = vjk.Vjk(logging, conf)
@@ -632,13 +515,15 @@ if vjkcli.connected() == False:
     logging.error("Not connected")
     sys.exit(1)
 
+vjktz = vjktz.VjkTz()
+
 if args.cmd in cmd_handler:
     if cmd_handler[args.cmd][0]:
         if args.category:
-            cmd_handler[args.cmd][2](vjkcli, args, unknown_args)
+            cmd_handler[args.cmd][2](vjkcli, vjktz, args, unknown_args)
         else:
-            cmd_handler[args.cmd][1](vjkcli, args, unknown_args)
+            cmd_handler[args.cmd][1](vjkcli, vjktz, args, unknown_args)
     else:
-        cmd_handler[args.cmd][1](vjkcli, args, unknown_args)
+        cmd_handler[args.cmd][1](vjkcli, vjktz, args, unknown_args)
 
 vjkcli.fini()

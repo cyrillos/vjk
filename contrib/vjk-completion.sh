@@ -19,7 +19,7 @@ _vjk()
 
 	case "$cmd" in
 	add)
-		COMPREPLY=($(compgen -W '--category --start --tz-start --stop --tz-stop' -- $cur))
+		COMPREPLY=($(compgen -W '--category' -- $cur))
 		return
 		;;
 	edit)
