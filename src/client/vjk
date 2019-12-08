@@ -174,67 +174,78 @@ def verify_tz_record(vjktz, d, name):
         return False
     return True
 
-def merge_records(reply):
+def merge_records(vjktz, reply):
+    '''Merge records with same name updating
+    stop time to account time spent'''
+
     merged = { }
-    def can_merge_ts(x, y):
+
+    def mergeable(vjktz, x):
         #
-        # Make sure they are finished
-        for i in ['tzstart', 'tzstop', 'tsstart', 'tsstop']:
-            if not x.get(i) or not y.get(i):
+        # Make sure it started and finished
+        for i in ['tsstart', 'tsstop']:
+            if not x.get(i):
                 return False
         #
-        # Make sure timezone is the same
-        for i in ['tzstart', 'tzstop']:
-            if int(x.get(i)) != int(y.get(i)):
+        # Verify timezones
+        for name in ['tzstart', 'tzstop']:
+            if not verify_tz_record(vjktz, x, name):
                 return False
         return True
 
     #
-    # Chain by names
-    for i, rec in enumerate(reply['data']):
+    # Chain by names into arrays or records.
+    # We need to keep index of the record in
+    # original @reply['data'] array so we could
+    # mark seen entries and skip them from report.
+    for idx, rec in enumerate(reply['data']):
         name = rec.get('name')
         if not name:
             continue
-        if name in merged:
-            merged[name].append([i, rec])
+        if merged.get(name):
+            merged[name].append([idx, rec])
         else:
-            merged[name] = [[i, rec]]
+            merged[name] = [[idx, rec]]
 
     #
-    # Drop single records or entries
-    # which can't be merged.
-    for name in [n for n in merged.keys()]:
+    # Preprocess merged records:
+    # - drop entries with single record, which means
+    #   we ran some activity only once so no need to
+    #   to merge it and simply we will report it as is
+    # - verify that start/stop times are present and
+    #   timezone offset is immutable
+    for name in [k for k in merged.keys()]:
         if len(merged[name]) == 1:
             del merged[name]
             continue
-        for i in range(1, len(merged[name])):
-            x = merged[name][i][1]
-            y = merged[name][i-1][1]
-            if not can_merge_ts(x,y):
+        for i in range(0, len(merged[name])):
+            rec = merged[name][i][1]
+            if not mergeable(vjktz, rec):
                 del merged[name]
                 break
 
     #
-    # Now do a real merge: keep first record
-    # from the chain, all others should
-    # be removed. Note that since we track
-    # the position in @reply, we can't drop
-    # records instead we mark them as @skip.
-    for name in [n for n in merged.keys()]:
+    # Now do a real merge procedure:
+    # - mark merged records in original @reply['data']
+    #   with a sign
+    # - count summary spent time and adjust stop time
+    #   for the first entry
+    # - the rest of entries mark with 'skip' attribute
+    for name in [k for k in merged.keys()]:
         pos = merged[name][0][0]
-        x = reply['data'][pos]
-        x['name'] += '*' # mark as merged
-        x_timestamp_start = int(x.get('tsstart', 0))
-        x_timestamp_stop = int(x.get('tsstop', 0))
+        top = reply['data'][pos]
+        top['name'] += '*'
+        top_epoch_start = int(top.get('tsstart'))
+        top_epoch_stop = int(top.get('tsstop'))
         for i in range(1, len(merged[name])):
             pos = merged[name][i][0]
-            y = reply['data'][pos]
-            y_timestamp_start = int(y.get('tsstart', 0))
-            y_timestamp_stop = int(y.get('tsstop', 0))
-            spent = y_timestamp_stop - y_timestamp_start
-            x_timestamp_stop += spent
-            y['skip'] = True # Skip from future processing
-        x['tsstop'] = str(x_timestamp_stop)
+            rest = reply['data'][pos]
+            rest_epoch_start = int(rest.get('tsstart'))
+            rest_epoch_stop = int(rest.get('tsstop'))
+            spent = rest_epoch_stop - rest_epoch_start
+            top_epoch_stop += spent
+            rest['skip'] = True
+        top['tsstop'] = str(top_epoch_stop)
         del merged[name]
 
 def cmd_handler_invalid(vjkcli, vjktz, args, unknown_args):
@@ -312,7 +323,7 @@ def cmd_handler_activity_list(vjkcli, vjktz, args, unknown_args):
     # When merging we're manging the name so user
     # will notice and extend stop time.
     if args.merge:
-        merge_records(reply)
+        merge_records(vjktz, reply)
 
     for x in reply['data']:
         if x.get('skip'):
@@ -338,10 +349,16 @@ def cmd_handler_activity_list(vjkcli, vjktz, args, unknown_args):
 
         if args.long:
             timestamp_start_str = vjktz.local_strftime_long(timestamp_start)
-            timestamp_stop_str = vjktz.local_strftime_long(timestamp_stop)
+            if timestamp_stop > 0:
+                timestamp_stop_str = vjktz.local_strftime_long(timestamp_stop)
+            else:
+                timestamp_stop_str = ''
         else:
             timestamp_start_str = vjktz.local_strftime_short(timestamp_start)
-            timestamp_stop_str = vjktz.local_strftime_short(timestamp_stop)
+            if timestamp_stop > 0:
+                timestamp_stop_str = vjktz.local_strftime_short(timestamp_stop)
+            else:
+                timestamp_stop_str = ''
 
         summary += spent
         h, m, s = vjktz.seconds_to_hms(spent)
