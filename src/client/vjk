@@ -161,6 +161,19 @@ def reply_verify_data(reply):
     reply_err(reply)
     return False
 
+def verify_tz_record(vjktz, d, name):
+    '''Verify if time offset is present and matches required'''
+
+    v = d.get(name)
+    if v == None:
+        logging.error("No time offset record")
+        return False
+    elif int(v) != vjktz.tzoff():
+        logging.error("Time offset record %d mismatches %d" %
+                      int(v), vjktz.tzoff())
+        return False
+    return True
+
 def merge_records(reply):
     merged = { }
     def can_merge_ts(x, y):
@@ -232,8 +245,6 @@ def cmd_handler_invalid(vjkcli, vjktz, args, unknown_args):
 
 def cmd_handler_activity_list(vjkcli, vjktz, args, unknown_args):
     '''List activities'''
-
-    timezone_offset = vjktz.tzoff()
 
     if args.start:
         report_from = vjktz.epoch_local_relative(args.start)
@@ -307,22 +318,18 @@ def cmd_handler_activity_list(vjkcli, vjktz, args, unknown_args):
         if x.get('skip'):
             continue
 
-        tz_start = int(x.get('tzstart', 0))
-        if tz_start != vjktz.tzoff():
-            logging.error("Unexpected tzstart")
-            continue
         timestamp_start = int(x.get('tsstart', 0))
+        if not verify_tz_record(vjktz, x, 'tzstart'):
+            continue
 
         if timestamp_start < report_from:
             continue
 
-        tz_stop = int(x.get('tzstop', 0))
         timestamp_stop = int(x.get('tsstop', 0))
         if timestamp_stop == 0:
             spent = vjktz.epoch() - timestamp_start
         else:
-            if tz_stop != vjktz.tzoff():
-                logging.error("Unexpected tzstop")
+            if not verify_tz_record(vjktz, x, 'tzstop'):
                 continue
             spent = timestamp_stop - timestamp_start
 
@@ -418,13 +425,12 @@ def cmd_handler_activity_start(vjkcli, vjktz, args, unknown_args):
         logging.error("Wrong activity format")
         return
 
-    vjkcli.activity_add(vjktz.epoch(), vjktz.tzoff(),
-                        None, None, activity, category, comment)
+    vjkcli.activity_add(vjktz.epoch(), None, activity, category, comment)
 
 def cmd_handler_activity_stop(vjkcli, vjktz, args, unknown_args):
     '''Stop current activity'''
 
-    vjkcli.activity_stop(vjktz.epoch(), vjktz.tzoff())
+    vjkcli.activity_stop(vjktz.epoch())
     return
 
 def cmd_handler_activity_restart(vjkcli, vjktz, args, unknown_args):
@@ -476,18 +482,13 @@ def cmd_handler_activity_edit(vjkcli, vjktz, args, unknown_args):
     args.start = vjktz.epoch_local_strptime_long(args.start)
     if args.start < 0:
         logging.error("Wrong start time format")
-    tz_start = vjktz.tzoff()
 
     if args.stop:
         args.stop = vjktz.epoch_local_strptime_long(args.stop)
         if args.stop < 0:
             logging.error("Wrong stop time format")
-        tz_stop = vjktz.tzoff()
-    else:
-        tz_stop = None
 
-    vjkcli.activity_update(args.id, args.start, tz_start,
-                           args.stop, tz_stop,
+    vjkcli.activity_update(args.id, args.start, args.stop,
                            activity, category, comment)
 
 def cmd_handler_category_edit(vjkcli, args, unknown_args):

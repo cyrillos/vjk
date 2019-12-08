@@ -4,11 +4,14 @@ import socket
 import json
 import sys
 
+import vjktz
+
 class Vjk:
     def __init__(self, log, conf):
         '''Setup logger from @log and configuration from @conf.
         Then connect to a server.'''
 
+        self.vjktz = vjktz.VjkTz()
         self.log = log
         self.conf = conf
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -81,22 +84,17 @@ class Vjk:
         obj = { 'cmd': 'exit' }
         self.send_only(obj)
 
-    def activity_add(self, ts_start, tz_start, ts_stop, tz_stop,
+    def activity_add(self, ts_start, ts_stop,
                      activity, category, comment):
         '''Send new activity to a sever.'''
 
-        self.log.debug("Vjk: activity_add: %s %s %s %s %s %s %s" %
-                       (repr(ts_start), repr(tz_start),
-                        repr(ts_stop), repr(tz_stop),
+        self.log.debug("Vjk: activity_add: %s %s %s %s %s" %
+                       (repr(ts_start), repr(ts_stop),
                         repr(activity), repr(category),
                         repr(comment)))
 
-        if ts_start == None or tz_start == None:
-            self.log.error("Vjk: activity_add: no start epoch or time offset")
-            return None
-
-        if ts_stop and tz_stop == None:
-            self.log.error("Vjk: activity_add: no stop time offset")
+        if ts_start == None:
+            self.log.error("Vjk: activity_add: no start epoch")
             return None
 
         if activity == None or category == None:
@@ -107,12 +105,12 @@ class Vjk:
                 'activity': activity,
                 'category': category,
                 'tsstart': ts_start,
-                'tzstart': tz_start,
+                'tzstart': self.vjktz.tzoff()
         }
 
         if ts_stop:
             data['tsstop'] = ts_stop
-            data['tzstop'] = tz_stop
+            data['tzstop'] = self.vjktz.tzoff()
 
         if comment:
             data['comment'] = comment
@@ -137,28 +135,26 @@ class Vjk:
 
         return self.send(obj)
 
-    def activity_stop(self, ts_stop, tz_stop):
+    def activity_stop(self, ts_stop):
         '''Send stop activity record.'''
 
-        self.log.debug("Vjk: activity_stop: %s %s" %
-                       (repr(ts_stop), repr(tz_stop)))
+        self.log.debug("Vjk: activity_stop: %s"
+                       % (repr(ts_stop)))
 
-        if ts_stop == None or tz_stop == None:
-            self.log.error("Vjk: activity_stop: no epoch or time offset")
+        if ts_stop == None:
+            self.log.error("Vjk: activity_stop: no stop epoch")
             return None
 
-        data = { 'tsstop': ts_stop, 'tzstop': tz_stop }
+        data = { 'tsstop': ts_stop, 'tzstop': self.vjktz.tzoff() }
         obj = { 'cmd': 'activity-stop', 'data': data }
         return self.send(obj)
 
-    def activity_update(self, eid, ts_start, tz_start,
-                        ts_stop, tz_stop, activity,
-                        category, comment):
+    def activity_update(self, eid, ts_start, ts_stop,
+                        activity, category, comment):
         '''Update existing activity.'''
 
-        self.log.debug("Vjk: activity_update: %s %s %s %s %s %s %s %s" %
-                       (repr(eid), repr(ts_start), repr(tz_start),
-                        repr(ts_stop), repr(tz_stop),
+        self.log.debug("Vjk: activity_update: %s %s %s %s %s %s" %
+                       (repr(eid), repr(ts_start), repr(ts_stop),
                         repr(activity), repr(category), repr(comment)))
         if eid == None:
             self.log.error("Vjk: activity_update: no ID")
@@ -172,12 +168,8 @@ class Vjk:
             data['category'] = category
         if ts_start:
             data['tsstart'] = ts_start
-        if tz_start:
-            data['tzstart'] = tz_start
         if ts_stop:
             data['tsstop'] = ts_stop
-        if tz_stop:
-            data['tzstop'] = tz_stop
         if comment:
             data['comment'] = comment
 

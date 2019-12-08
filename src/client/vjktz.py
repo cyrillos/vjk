@@ -220,6 +220,7 @@ class VjkTz:
 if __name__ == "__main__":
     tz = VjkTz()
     print('epoch',                      tz.epoch())
+    print('tzoff',                      tz.tzoff())
 
     print('epoch_local_month',          tz.epoch_local_month())
     print('epoch_local_week',           tz.epoch_local_week())
