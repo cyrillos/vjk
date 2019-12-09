@@ -61,6 +61,8 @@ for cmd in ['list']:
                      help = 'Merge same activities', action = 'store_true')
     spp.add_argument('--long', dest = 'long',
                      help = 'Long output for time records.', action = 'store_true')
+    spp.add_argument('--raw', dest = 'raw',
+                     help = 'Raw epoch output for time records.', action = 'store_true')
     spp.add_argument('--start', dest = 'start',
                      help = 'Time to report from. Format [-]number[w|d|h])')
     spp.add_argument('--stop', dest = 'stop',
@@ -300,6 +302,8 @@ def cmd_handler_activity_list(vjkcli, vjktz, args, unknown_args):
 
     if args.long:
         ts_len = 22
+    elif args.raw:
+        ts_len = 12
     else:
         ts_len = 10
     catlen = 8
@@ -351,14 +355,17 @@ def cmd_handler_activity_list(vjkcli, vjktz, args, unknown_args):
             timestamp_start_str = vjktz.local_strftime_long(timestamp_start)
             if timestamp_stop > 0:
                 timestamp_stop_str = vjktz.local_strftime_long(timestamp_stop)
-            else:
-                timestamp_stop_str = ''
+        elif args.raw:
+            timestamp_start_str = str(timestamp_start)
+            if timestamp_stop > 0:
+                timestamp_stop_str = str(timestamp_stop)
         else:
             timestamp_start_str = vjktz.local_strftime_short(timestamp_start)
             if timestamp_stop > 0:
                 timestamp_stop_str = vjktz.local_strftime_short(timestamp_stop)
-            else:
-                timestamp_stop_str = ''
+
+        if timestamp_stop <= 0:
+            timestamp_stop_str = ''
 
         summary += spent
         h, m, s = vjktz.seconds_to_hms(spent)
