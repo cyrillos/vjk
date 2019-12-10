@@ -168,8 +168,10 @@ class Vjk:
             data['category'] = category
         if ts_start:
             data['tsstart'] = ts_start
+            data['tzstart'] = self.vjktz.tzoff()
         if ts_stop:
             data['tsstop'] = ts_stop
+            data['tzstop'] = self.vjktz.tzoff()
         if comment:
             data['comment'] = comment
 
