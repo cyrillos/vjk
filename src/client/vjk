@@ -486,7 +486,7 @@ def cmd_handler_activity_restart(vjkcli, vjktz, args, unknown_args):
 
     cmd_handler_activity_start(vjkcli, vjktz, args, [rec])
 
-def cmd_handler_category_add(vjkcli, args, unknown_args):
+def cmd_handler_category_add(vjkcli, vjktz, args, unknown_args):
     '''Add new category'''
 
     if len(unknown_args) < 1:
@@ -515,7 +515,7 @@ def cmd_handler_activity_edit(vjkcli, vjktz, args, unknown_args):
     vjkcli.activity_update(args.id, args.start, args.stop,
                            activity, category, comment)
 
-def cmd_handler_category_edit(vjkcli, args, unknown_args):
+def cmd_handler_category_edit(vjkcli, vjktz, args, unknown_args):
     '''Edit category'''
 
     if len(unknown_args) < 1:
