@@ -503,6 +503,17 @@ def cmd_handler_activity_edit(vjkcli, vjktz, args, unknown_args):
     else:
         activity, category, comment = (None, None, None)
 
+    if activity == None or category == None:
+        reply = vjkcli.activity_list(None, None, args.id)
+        if not reply_verify_data(reply):
+            return
+        if len(reply['data']) == 1:
+            x = reply['data'][0]
+            if activity == None:
+                activity = x.get('name')
+            if category == None:
+                category = x.get('category')
+
     args.start = vjktz.epoch_local_strptime_long(args.start)
     if args.start < 0:
         logging.error("Wrong start time format")
